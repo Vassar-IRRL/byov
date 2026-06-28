@@ -117,3 +117,24 @@ button.running { background: var(--inhibit); border-color: var(--inhibit); color
 
 footer { padding: 16px 28px; border-top: 1px solid var(--line);
   color: var(--ink-dim); font-size: 12px; font-family: var(--mono); }
+
+/* ── Two-screen layout ── */
+header { display: flex; align-items: center; justify-content: space-between; }
+.mode-toggle { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 9px; border: 1px solid var(--line); }
+.mode-toggle button { background: transparent; border: 0; padding: 8px 16px; border-radius: 6px; color: var(--ink-dim); }
+.mode-toggle button.active { background: var(--motor); color: #06101f; font-weight: 650; }
+
+.screen { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: 20px 28px; align-items: start; }
+.screen.hidden { display: none; }
+#editor, #arena { width: 100%; height: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: block; }
+#editor { cursor: grab; }
+#arena { cursor: crosshair; }
+
+.side { display: flex; flex-direction: column; gap: 8px; }
+.side h3 { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); }
+.side h3:first-child { margin-top: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.tool-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.tool.active { background: var(--motor); color: #06101f; border-color: var(--motor); font-weight: 600; }
+.presets { display: flex; flex-direction: column; gap: 6px; }
+.presets button { text-align: left; }

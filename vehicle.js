@@ -14,28 +14,58 @@ export class Vehicle {
     // Robot pose (world metres / radians). Set by the arena on spawn.
     this.x = 0; this.y = 0; this.heading = Math.PI / 2; // start facing +Y (up)
 
-    // ── ONE AnaBBot-inspired body (v1: single fixed body plan) ──
-    // Sensors: two LDRs splayed OUTWARD, two forward IR proximity sensors.
-    // Convention (matches Python): angle is degrees CCW from body +Y (forward),
-    // and +X = right. So a RIGHT-side sensor pointing outward-right needs a
-    // NEGATIVE angle; a LEFT-side sensor pointing outward-left needs POSITIVE.
-    this.sensors = [
-      { id: 'L_light', type: 'LDR', mount: { x: -0.030, y: 0.035, angle:  30 } },
-      { id: 'R_light', type: 'LDR', mount: { x:  0.030, y: 0.035, angle: -30 } },
-      { id: 'L_prox',  type: 'IR',  mount: { x: -0.025, y: 0.040, angle:  15 } },
-      { id: 'R_prox',  type: 'IR',  mount: { x:  0.025, y: 0.040, angle: -15 } },
-    ];
+    // ── ONE AnaBBot-inspired RECTANGULAR body (v1: single fixed body plan) ──
+    // Front-wheel drive (motors on the sides), rear caster (not modelled).
+    // Body dimensions roughly match the physical AnaBBot footprint.
+    this.bodyW = 0.090;   // m — width (left-right)
+    this.bodyL = 0.110;   // m — length (front-back)
 
-    // ── Neurons (v1 model). Start with 2 (one per motor) but support more. ──
-    // Each neuron: { id, bias, inputs: [{sensorId, sign}], motor: 'L'|'R'|null }
+    // Fixed sensor MOUNT POINTS at the front. The player chooses what sensor
+    // (LDR / IR / none) occupies each mount. Placement is static for v1.
+    // mount.x = body-frame right(+)/left(-), mount.y = forward(+); angle° CCW.
+    this.mountPoints = [
+      { id: 'm_FL', x: -0.030, y: 0.050, angle:  30 },  // front-left, splayed left
+      { id: 'm_FC', x:  0.000, y: 0.055, angle:   0 },  // front-centre, forward
+      { id: 'm_FR', x:  0.030, y: 0.050, angle: -30 },  // front-right, splayed right
+    ];
+    // Which sensor type sits at each mount (default loadout: two LDRs + one IR).
+    this.loadout = { m_FL: 'LDR', m_FC: 'IR', m_FR: 'LDR' };
+
+    this._rebuildSensors();
+
+    // ── Neurons (v1 model). Two, one per motor. ──
+    // Each: { id, bias, inputs:[{sensorId, sign}], motor:'L'|'R' }
     this.neurons = [
       { id: 'n_L', bias: 0, inputs: [], motor: 'L' },
       { id: 'n_R', bias: 0, inputs: [], motor: 'R' },
     ];
 
-    // Live readings cache (for HUD / inspection)
     this._readings = {};
     this._motorCmd = { L: 0, R: 0 };
+  }
+
+  /* Rebuild the active sensor list from the loadout (mount -> type). */
+  _rebuildSensors() {
+    this.sensors = [];
+    for (const mp of this.mountPoints) {
+      const type = this.loadout[mp.id];
+      if (type === 'LDR' || type === 'IR') {
+        this.sensors.push({
+          id: mp.id, type,
+          mount: { x: mp.x, y: mp.y, angle: mp.angle },
+        });
+      }
+    }
+  }
+
+  /* Set a mount's sensor type ('LDR' | 'IR' | 'none'); rebuilds sensors and
+   * drops any wires from a sensor that no longer exists. */
+  setMount(mountId, type) {
+    this.loadout[mountId] = type;
+    this._rebuildSensors();
+    const live = new Set(this.sensors.map(s => s.id));
+    for (const n of this.neurons)
+      n.inputs = n.inputs.filter(i => live.has(i.sensorId));
   }
 
   /* Read every sensor against the current world. Returns {sensorId: value}. */

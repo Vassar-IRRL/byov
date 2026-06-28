@@ -1,32 +1,28 @@
 # BYOV — Build Your Own Vehicle (web)
 
-A browser-based Braitenberg-vehicle simulator: wire directional sensors to
-motors and watch the vehicle behave. A digital twin of the physical PAW lab
-AnaBBot — sensors model real directionality (cone of operation), not the
-omnidirectional approximation BugWorks used.
+A browser-based Braitenberg-vehicle simulator and digital twin of the physical
+PAW lab AnaBBot. Sensors model real directionality (cone of operation), unlike
+BugWorks' omnidirectional approximation.
+
+## Two screens (toggle in the header)
+- **Build robot** — the rectangular AnaBBot drawn top-down (motors on the sides,
+  sensors at the front). Overlaid neuron/wiring editor: drag a wire from a front
+  sensor to a neuron's E (excite) or I (inhibit) input; each neuron drives its
+  motor; drag a trimpot for bias. Double-click a sensor to change its type
+  (LDR / IR / none). Presets build Braitenberg Vehicles 1–3b.
+- **Arena & run** — full-screen grid arena. Tools: place lights, add/erase walls
+  on the grid, place the robot (position + heading). Run / Reset, sensor-cone
+  toggle, and Record → Export (JSON) for lab write-ups.
 
 ## Run it
-Hosted: open the GitHub Pages link for this repo.
-
-## Local testing
-This app uses ES modules, which browsers block over `file://`. To test locally,
-serve the folder over http, e.g.:
-
-    python3 -m http.server 8000
-
-then open http://localhost:8000 . (Double-clicking index.html will NOT work
-because of the module sandbox — hosting over http, like GitHub Pages, is
-required.)
+Hosted: open the GitHub Pages link for this repo. (Must be served over http —
+ES modules are blocked over file://. Locally: `python3 -m http.server` then open
+http://localhost:8000 .)
 
 ## Files
-- index.html / style.css — UI
-- sim.js     — physics: differential drive + DIRECTIONAL sensors (the core)
-- vehicle.js — body, sensors, neurons (v1 model), motors, wiring evaluation
-- arena.js   — world + canvas rendering
-- app.js     — UI glue, main loop, presets, record/export
-
-## v1 model (per BYOV_WEB_SPEC.md)
-- One AnaBBot-inspired body; LDR (70° cone) + IR (narrow beam) sensors.
-- Neuron: N = clamp(bias + Σ(±1 × sensor signal), 0, 1). Bias in [-1, 1].
-  Wire sign by E/I header; no per-wire gains; N output only.
-- Presets cover Braitenberg Vehicles 1, 2a, 2b, 3a, 3b.
+- index.html / style.css — two-screen UI
+- sim.js         — physics: differential drive + DIRECTIONAL sensors (core)
+- vehicle.js     — rectangular body, fixed front mounts, neurons (v1), wiring
+- editor_view.js — Screen 1: robot + wiring editor (drag-to-connect)
+- arena.js       — world, grid editing, canvas rendering
+- app.js         — screen toggle, tools, run loop, presets, record/export

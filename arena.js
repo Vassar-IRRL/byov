@@ -7,8 +7,10 @@ import { PHYS, LDR, sensorPose } from './sim.js';
 export class Arena {
   constructor(width = 1.2, height = 1.6) {
     this.W = width; this.H = height;
+    this.grid = 0.10;                 // 10 cm grid for wall/light placement
     this.walls = this._boundary();
     this.lights = [{ x: width * 0.5, y: height * 0.85, intensity: 1 }];
+    this.robotStart = { x: width * 0.5, y: height * 0.18, heading: Math.PI / 2 };
   }
   _boundary() {
     const { W, H } = this;
@@ -19,8 +21,17 @@ export class Arena {
       { x1: 0, y1: H, x2: 0, y2: 0 },
     ];
   }
+  snap(v) { return Math.round(v / this.grid) * this.grid; }
+  addWallCell(gx, gy) {
+    // add the four edges of a grid cell at (gx,gy) as walls (dedup-ish)
+    const x = gx * this.grid, y = gy * this.grid, g = this.grid;
+    this.addWall(x, y, x + g, y); this.addWall(x + g, y, x + g, y + g);
+    this.addWall(x + g, y + g, x, y + g); this.addWall(x, y + g, x, y);
+  }
   addWall(x1, y1, x2, y2) { this.walls.push({ x1, y1, x2, y2 }); }
   addLight(x, y, intensity = 1) { this.lights.push({ x, y, intensity }); }
+  clearLights() { this.lights = []; }
+  clearWalls() { this.walls = this._boundary(); }
   reset() { this.walls = this._boundary(); }
 }
 
@@ -57,6 +68,18 @@ export class Renderer {
     // arena floor
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(this.tx(0), this.ty(A.H), this.m(A.W), this.m(A.H));
+
+    // grid (edit mode)
+    if (opts.showGrid) {
+      ctx.strokeStyle = '#1c2230'; ctx.lineWidth = 1;
+      for (let gx = 0; gx <= A.W + 1e-6; gx += A.grid) {
+        ctx.beginPath(); ctx.moveTo(this.tx(gx), this.ty(0)); ctx.lineTo(this.tx(gx), this.ty(A.H)); ctx.stroke();
+      }
+      for (let gy = 0; gy <= A.H + 1e-6; gy += A.grid) {
+        ctx.beginPath(); ctx.moveTo(this.tx(0), this.ty(gy)); ctx.lineTo(this.tx(A.W), this.ty(gy)); ctx.stroke();
+      }
+    }
+
     ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
     ctx.strokeRect(this.tx(0), this.ty(A.H), this.m(A.W), this.m(A.H));
 
@@ -115,14 +138,20 @@ export class Renderer {
       }
     }
 
-    // body
-    ctx.fillStyle = '#1f6feb';
-    ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(px, py, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // heading indicator (forward = +Y world)
-    const hx = px + Math.cos(-v.heading) * R, hy = py + Math.sin(-v.heading) * R;
-    ctx.strokeStyle = '#f0f6fc'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(hx, hy); ctx.stroke();
+    // body (rectangle matching the AnaBBot footprint)
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(-v.heading + Math.PI / 2);   // heading: +Y forward -> rotate so forward is up
+    const halfW = this.m(v.bodyW / 2), halfL = this.m(v.bodyL / 2);
+    ctx.fillStyle = '#1f6feb'; ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.rect(-halfW, -halfL, halfW * 2, halfL * 2); ctx.fill(); ctx.stroke();
+    // forward indicator (a notch at the front)
+    ctx.fillStyle = '#f0f6fc';
+    ctx.beginPath(); ctx.moveTo(0, -halfL); ctx.lineTo(-4, -halfL + 7); ctx.lineTo(4, -halfL + 7); ctx.closePath(); ctx.fill();
+    // motors on the sides
+    ctx.fillStyle = '#58a6ff';
+    ctx.fillRect(-halfW - 4, -6, 4, 12); ctx.fillRect(halfW, -6, 4, 12);
+    ctx.restore();
 
     // sensor dots
     for (const s of v.sensors) {
