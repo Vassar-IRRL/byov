@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Build Your Own Vehicle</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Build Your Own Vehicle</h1>
+    <p class="sub">Wire sensors to motors and watch your Braitenberg vehicle behave. A digital twin of the physical PAW lab robot.</p>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas id="arena" width="520" height="680"></canvas>
+      <div class="stage-controls">
+        <button id="btn-run" class="primary">▶ Run</button>
+        <button id="btn-reset">↺ Reset</button>
+        <label class="chk"><input type="checkbox" id="chk-cones" checked> Show sensor cones</label>
+        <span class="hint">Click the arena to move the light.</span>
+      </div>
+      <div class="recorder">
+        <button id="btn-record">● Record</button>
+        <button id="btn-export" disabled>⬇ Export run (JSON)</button>
+        <span id="rec-status" class="hint"></span>
+      </div>
+    </section>
+
+    <section class="wiring">
+      <h2>Wiring</h2>
+      <p class="wiring-help">
+        Connect each sensor to a motor's neuron. <b>E</b> = excite (speeds the
+        motor up), <b>I</b> = inhibit (slows it down). Set each neuron's
+        <b>bias</b> (its resting drive) below.
+      </p>
+      <div id="wiring-grid"></div>
+
+      <h3>Presets</h3>
+      <div class="presets" id="presets"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>PAW Robotics · BYOV web</span>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
