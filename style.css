@@ -26,14 +26,10 @@ body {
 }
 
 header {
-  padding: 22px 28px 14px; border-bottom: 1px solid var(--line);
+  padding: 16px 28px 12px; border-bottom: 1px solid var(--line);
 }
 header h1 {
   margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em;
-}
-header h1::before {
-  content: '◖◗'; color: var(--motor); margin-right: 10px; letter-spacing: -3px;
-  font-family: var(--mono);
 }
 .sub { margin: 4px 0 0; color: var(--ink-dim); font-size: 14px; max-width: 60ch; }
 
@@ -124,12 +120,18 @@ header { display: flex; align-items: center; justify-content: space-between; }
 .mode-toggle button { background: transparent; border: 0; padding: 8px 16px; border-radius: 6px; color: var(--ink-dim); }
 .mode-toggle button.active { background: var(--motor); color: #06101f; font-weight: 650; }
 
-.screen { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: 20px 28px; align-items: start; }
+.screen { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: 14px 28px; align-items: start; }
 .screen.hidden { display: none; }
-#editor { width: auto; max-width: 100%; height: auto; justify-self: center; }
-#arena { width: 100%; height: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; display: block; }
+#editor, #arena {
+  width: auto; max-width: 100%; height: auto;
+  max-height: calc(100vh - 150px);   /* fit the viewport; no page scroll */
+  justify-self: center;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; display: block;
+}
 #editor { cursor: grab; }
 #arena { cursor: crosshair; }
+.screen { max-height: calc(100vh - 96px); }
 
 .side { display: flex; flex-direction: column; gap: 8px; }
 .side h3 { margin: 14px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-dim); }

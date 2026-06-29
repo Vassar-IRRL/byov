@@ -150,8 +150,7 @@ export class EditorView {
       ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.stroke();
       // labels
       ctx.fillStyle = COL.dim; ctx.font = '10px monospace'; ctx.textAlign = 'center';
-      ctx.fillText(n.motor === 'L' ? 'L neuron' : 'R neuron', cx, cy - r - 6);
-      ctx.fillText('bias ' + n.bias.toFixed(2), cx, cy + r + 13);
+      ctx.fillText('bias ' + n.bias.toFixed(2), cx + r + 30, cy);
     }
   }
 
@@ -208,10 +207,8 @@ export class EditorView {
   }
 
   _labels() {
-    const ctx = this.ctx;
-    ctx.font = '11px monospace'; ctx.textAlign = 'left'; ctx.fillStyle = COL.dim;
-    const x = 16, y = this.H - 30;
-    ctx.fillText('Drag a front sensor → a neuron E (excite) or I (inhibit). Click a wire to remove. Drag a trimpot for bias. Double-click a sensor to change type.', x, y);
+    // (Instructions live in the side panel, not on the canvas, to avoid
+    // overlapping the REAR label and getting clipped.)
   }
 
   _roundRect(x, y, w, h, r) {

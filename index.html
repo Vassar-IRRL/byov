@@ -20,20 +20,20 @@
 
   <!-- ── SCREEN 1: Build robot (rectangular body + wiring overlay) ── -->
   <main id="screen-build" class="screen">
-    <canvas id="editor" width="640" height="720"></canvas>
+    <canvas id="editor" width="600" height="660"></canvas>
     <aside class="side">
       <h3>Presets</h3>
       <div class="presets" id="presets"></div>
-      <h3>Sensors</h3>
-      <p class="hint">Double-click a front sensor to change its type (LDR → IR → none).</p>
       <h3>How to wire</h3>
-      <p class="hint">Drag from a front sensor to a neuron's <b style="color:#3fb950">E</b> (excite) or <b style="color:#f85149">I</b> (inhibit) input. Each neuron drives its motor. Drag a trimpot up/down for bias.</p>
+      <p class="hint">Drag from a front sensor to a neuron's <b style="color:#3fb950">E</b> (excite) or <b style="color:#f85149">I</b> (inhibit) input. Each neuron drives its motor.</p>
+      <p class="hint">Drag a neuron's trimpot up or down to set its bias.</p>
+      <p class="hint">Double-click a sensor to change its type (LDR → IR → none).</p>
     </aside>
   </main>
 
   <!-- ── SCREEN 2: Arena & run ── -->
   <main id="screen-run" class="screen hidden">
-    <canvas id="arena" width="620" height="800"></canvas>
+    <canvas id="arena" width="560" height="720"></canvas>
     <aside class="side">
       <h3>Run</h3>
       <div class="row">
