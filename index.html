@@ -28,6 +28,7 @@
       <p class="hint">Drag from a front sensor to a neuron's <b style="color:#3fb950">E</b> (excite) or <b style="color:#f85149">I</b> (inhibit) input. Each neuron drives its motor.</p>
       <p class="hint">Drag a neuron's trimpot up or down to set its bias.</p>
       <p class="hint">Double-click a sensor to change its type (LDR → IR → none).</p>
+      <p class="hint">Right-click an LDR to cycle its colour channel (White → Red → Green → Blue). A coloured channel only responds to lights of that colour; White responds to all.</p>
     </aside>
   </main>
 
@@ -49,6 +50,15 @@
         <button data-tool="wall" class="tool">Add wall</button>
         <button data-tool="erase" class="tool">Erase wall</button>
         <button data-tool="robot" class="tool">Place robot</button>
+      </div>
+      <div class="color-row" id="light-color-row">
+        <span class="hint">Light colour:</span>
+        <div class="color-swatches" id="light-colors">
+          <button data-color="white" class="sw sw-white active" title="white"></button>
+          <button data-color="red" class="sw sw-red" title="red"></button>
+          <button data-color="green" class="sw sw-green" title="green"></button>
+          <button data-color="blue" class="sw sw-blue" title="blue"></button>
+        </div>
       </div>
       <div class="row">
         <button id="btn-clear-lights">Clear lights</button>

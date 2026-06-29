@@ -9,7 +9,7 @@ export class Arena {
     this.W = width; this.H = height;
     this.grid = 0.10;                 // 10 cm grid for wall/light placement
     this.walls = this._boundary();
-    this.lights = [{ x: width * 0.5, y: height * 0.85, intensity: 1 }];
+    this.lights = [{ x: width * 0.5, y: height * 0.85, intensity: 1, color: 'white' }];
     this.robotStart = { x: width * 0.5, y: height * 0.18, heading: Math.PI / 2 };
   }
   _boundary() {
@@ -29,7 +29,7 @@ export class Arena {
     this.addWall(x + g, y + g, x, y + g); this.addWall(x, y + g, x, y);
   }
   addWall(x1, y1, x2, y2) { this.walls.push({ x1, y1, x2, y2 }); }
-  addLight(x, y, intensity = 1) { this.lights.push({ x, y, intensity }); }
+  addLight(x, y, intensity = 1, color = 'white') { this.lights.push({ x, y, intensity, color }); }
   clearLights() { this.lights = []; }
   clearWalls() { this.walls = this._boundary(); }
   reset() { this.walls = this._boundary(); }
@@ -83,17 +83,19 @@ export class Renderer {
     ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
     ctx.strokeRect(this.tx(0), this.ty(A.H), this.m(A.W), this.m(A.H));
 
-    // light sources (glow)
+    // light sources (glow), tinted by colour
+    const LIGHT_RGB = { white: '255,221,87', red: '255,90,90', green: '80,210,90', blue: '90,150,255' };
     for (const L of A.lights) {
+      const rgb = LIGHT_RGB[L.color] || LIGHT_RGB.white;
       const r = this.m(0.08) * (L.intensity || 1);
       const g = ctx.createRadialGradient(this.tx(L.x), this.ty(L.y), 0,
                                          this.tx(L.x), this.ty(L.y), r * 3);
-      g.addColorStop(0, 'rgba(255,221,87,0.9)');
-      g.addColorStop(0.4, 'rgba(255,221,87,0.25)');
-      g.addColorStop(1, 'rgba(255,221,87,0)');
+      g.addColorStop(0, `rgba(${rgb},0.9)`);
+      g.addColorStop(0.4, `rgba(${rgb},0.25)`);
+      g.addColorStop(1, `rgba(${rgb},0)`);
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.arc(this.tx(L.x), this.ty(L.y), r * 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffdd57';
+      ctx.fillStyle = `rgb(${rgb})`;
       ctx.beginPath(); ctx.arc(this.tx(L.x), this.ty(L.y), r * 0.5, 0, Math.PI * 2); ctx.fill();
     }
 

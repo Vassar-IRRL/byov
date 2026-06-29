@@ -52,13 +52,30 @@ export function sensorPose(robot, mount) {
   return { x: wx, y: wy, dir };
 }
 
-/* LDR reading: sum over light sources of (inverse-square distance ×
- * cosine off-axis), gated by the FOV cone and occlusion by walls.
- * Returns a value in [0, 1].
+/* Does an LDR of the given channel respond to a light of the given color?
+ * White (W) channel responds to ANY light. Colored channels (R/G/B) respond
+ * ONLY to lights of their own color. (White light is seen only by the W
+ * channel — colored channels are strict.)
  */
-export function readLDR(pose, lights, walls) {
+export function channelSeesColor(channel, lightColor) {
+  const ch = (channel || 'W').toUpperCase();
+  const col = (lightColor || 'white').toLowerCase();
+  if (ch === 'W') return true;               // white channel: sees everything
+  if (ch === 'R') return col === 'red';
+  if (ch === 'G') return col === 'green';
+  if (ch === 'B') return col === 'blue';
+  return true;
+}
+
+/* LDR reading: sum over light sources of (inverse-square distance ×
+ * cosine off-axis), gated by the FOV cone, occlusion by walls, AND the
+ * sensor's colour channel vs the light's colour. Returns [0, 1].
+ * `channel` is one of 'W','R','G','B' (default 'W').
+ */
+export function readLDR(pose, lights, walls, channel = 'W') {
   let total = 0;
   for (const L of lights) {
+    if (!channelSeesColor(channel, L.color)) continue;   // colour mismatch -> blind
     const dx = L.x - pose.x, dy = L.y - pose.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 1e-4) { total += (L.intensity || 1); continue; }

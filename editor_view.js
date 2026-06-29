@@ -20,6 +20,8 @@ const COL = {
   deck: '#12161d', deckLine: '#3a4250', chassis: '#1a1f27',
   ink: '#e6edf3', dim: '#8b949e', tyre: '#0c0e12', tyreLine: '#2b3038',
 };
+// LDR colour-channel swatch colours (W/R/G/B). W shown as the warm LDR yellow.
+const LDR_CH_COL = { W: '#ffdd57', R: '#ff5a5a', G: '#50d25a', B: '#5a96ff' };
 
 export class EditorView {
   constructor(canvas, vehicle) {
@@ -59,6 +61,7 @@ export class EditorView {
       this.headers.push({
         id: 'out_' + mp.id, kind: 'sensor-out', sensorId: mp.id, mountId: mp.id,
         x: px, y: this.frontY, r: 11, sensorType: this.v.loadout[mp.id],
+        channel: this.v.channels[mp.id] || 'W',
       });
     }
     // ── Motor headers at the REAR (bottom) ──
@@ -185,7 +188,11 @@ export class EditorView {
     const ctx = this.ctx;
     for (const h of this.headers) {
       let fill = COL.dim, ring = COL.deckLine;
-      if (h.kind === 'sensor-out') fill = h.sensorType === 'LDR' ? COL.light : h.sensorType === 'IR' ? COL.prox : '#3a4250';
+      if (h.kind === 'sensor-out') {
+        if (h.sensorType === 'LDR') fill = LDR_CH_COL[h.channel || 'W'];
+        else if (h.sensorType === 'IR') fill = COL.prox;
+        else fill = '#3a4250';
+      }
       else if (h.kind === 'neuron-in') fill = h.sign > 0 ? COL.excite : COL.inhibit;
       else if (h.kind === 'neuron-out') fill = COL.ink;
       else if (h.kind === 'motor-in') fill = COL.motor;
@@ -201,7 +208,12 @@ export class EditorView {
       // labels
       ctx.fillStyle = COL.dim; ctx.font = '10px monospace';
       if (h.kind === 'neuron-in') { ctx.textAlign = 'center'; ctx.fillText(h.sign > 0 ? 'E' : 'I', h.x, h.y - 13); }
-      if (h.kind === 'sensor-out') { ctx.textAlign = 'center'; ctx.fillText(h.sensorType || '—', h.x, h.y - 15); }
+      if (h.kind === 'sensor-out') {
+        ctx.textAlign = 'center';
+        const label = (h.sensorType === 'LDR') ? `LDR·${h.channel || 'W'}`
+                    : (h.sensorType === 'IR') ? 'IR' : '—';
+        ctx.fillText(label, h.x, h.y - 15);
+      }
       if (h.kind === 'motor-in') { ctx.textAlign = 'center'; ctx.fillText(h.motor === 'L' ? 'L motor' : 'R motor', h.x, h.y + 26); }
     }
   }
@@ -264,6 +276,19 @@ export class EditorView {
         const cur = this.v.loadout[h.mountId];
         const next = cur === 'LDR' ? 'IR' : cur === 'IR' ? 'none' : 'LDR';
         this.v.setMount(h.mountId, next);
+        this.layout(); this.draw(); if (this.onChange) this.onChange();
+      }
+    });
+    // right-click an LDR to cycle its colour channel W -> R -> G -> B
+    c.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const p = xy(e);
+      const h = this._hit(p);
+      if (h && h.kind === 'sensor-out' && this.v.loadout[h.mountId] === 'LDR') {
+        const order = ['W', 'R', 'G', 'B'];
+        const cur = this.v.channels[h.mountId] || 'W';
+        const next = order[(order.indexOf(cur) + 1) % order.length];
+        this.v.setChannel(h.mountId, next);
         this.layout(); this.draw(); if (this.onChange) this.onChange();
       }
     });

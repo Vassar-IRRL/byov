@@ -20,6 +20,7 @@ const renderer = new Renderer(arenaCanvas, arena);
 let running = false, recording = false, recordData = null, showCones = true;
 let raf = null, lastT = 0, tool = 'light', editMode = true;
 let replay = null;          // { data, frame, playing, saved } when in replay mode
+let lightColor = 'white';   // colour of newly-placed lights
 
 function spawnVehicle() {
   vehicle.x = arena.robotStart.x;
@@ -84,7 +85,19 @@ document.querySelectorAll('#arena-tools .tool').forEach(b => {
                     wall: 'Click grid cells to add walls.', erase: 'Click a wall to remove it.',
                     robot: 'Click to place the robot, then drag from it to aim (drag direction = front).' };
     document.getElementById('tool-hint').textContent = hints[tool];
+    // show the light-colour picker only for the light tool
+    const cr = document.getElementById('light-color-row');
+    if (cr) cr.style.display = (tool === 'light') ? 'flex' : 'none';
     robotPlaceStage = 0;
+  });
+});
+
+// light-colour swatch selection
+document.querySelectorAll('#light-colors .sw').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#light-colors .sw').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    lightColor = b.dataset.color;
   });
 });
 
@@ -98,7 +111,7 @@ arenaCanvas.addEventListener('click', e => {
   if (w.x < 0 || w.x > arena.W || w.y < 0 || w.y > arena.H) return;
 
   if (tool === 'light') {
-    arena.addLight(arena.snap(w.x), arena.snap(w.y), 1);
+    arena.addLight(arena.snap(w.x), arena.snap(w.y), 1, lightColor);
   } else if (tool === 'erase-light') {
     // remove the nearest light to the click (generous radius — the glow is big)
     let best = -1, bestD = 0.20;

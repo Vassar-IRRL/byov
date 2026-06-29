@@ -147,3 +147,13 @@ header { display: flex; align-items: center; justify-content: space-between; }
 #replay-scrub { accent-color: var(--motor); margin: 8px 0 2px; }
 .side button:disabled { opacity: .4; cursor: default; }
 #replay-name { color: var(--ink); }
+
+/* Light colour picker + LDR channel swatches */
+.color-row { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+.color-swatches { display: flex; gap: 6px; }
+.sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); padding: 0; cursor: pointer; }
+.sw.active { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
+.sw-white { background: #ffdd57; }
+.sw-red { background: #ff5a5a; }
+.sw-green { background: #50d25a; }
+.sw-blue { background: #5a96ff; }

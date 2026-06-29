@@ -36,6 +36,8 @@ export class Vehicle {
     ];
     // Default loadout: LDRs outboard, IRs inboard (the physical configuration).
     this.loadout = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' };
+    // LDR colour channels: W (white, sees all) / R / G / B. Default white.
+    this.channels = { LDR_L: 'W', IR_L: 'W', IR_R: 'W', LDR_R: 'W' };
 
     this._rebuildSensors();
 
@@ -56,10 +58,9 @@ export class Vehicle {
     for (const mp of this.mountPoints) {
       const type = this.loadout[mp.id];
       if (type === 'LDR' || type === 'IR') {
-        this.sensors.push({
-          id: mp.id, type,
-          mount: { x: mp.x, y: mp.y, angle: mp.angle },
-        });
+        const s = { id: mp.id, type, mount: { x: mp.x, y: mp.y, angle: mp.angle } };
+        if (type === 'LDR') s.channel = this.channels[mp.id] || 'W';   // W/R/G/B
+        this.sensors.push(s);
       }
     }
   }
@@ -74,12 +75,18 @@ export class Vehicle {
       n.inputs = n.inputs.filter(i => live.has(i.sensorId));
   }
 
+  /* Set an LDR mount's colour channel ('W'|'R'|'G'|'B'). */
+  setChannel(mountId, channel) {
+    this.channels[mountId] = channel;
+    this._rebuildSensors();
+  }
+
   /* Read every sensor against the current world. Returns {sensorId: value}. */
   readSensors(lights, walls) {
     const out = {};
     for (const s of this.sensors) {
       const pose = sensorPose(this, s.mount);
-      out[s.id] = (s.type === 'LDR') ? readLDR(pose, lights, walls)
+      out[s.id] = (s.type === 'LDR') ? readLDR(pose, lights, walls, s.channel)
                                      : readIR(pose, walls);
     }
     this._readings = out;
@@ -127,6 +134,8 @@ export class Vehicle {
   /* Serialise the vehicle's wiring (for save / record / lab write-up). */
   toJSON() {
     return {
+      loadout: { ...this.loadout },
+      channels: { ...this.channels },
       sensors: this.sensors.map(s => ({ ...s })),
       neurons: this.neurons.map(n => ({
         id: n.id, bias: n.bias, motor: n.motor,
@@ -135,6 +144,9 @@ export class Vehicle {
     };
   }
   loadJSON(data) {
+    if (data.loadout) { this.loadout = { ...this.loadout, ...data.loadout }; }
+    if (data.channels) { this.channels = { ...this.channels, ...data.channels }; }
+    if (data.loadout || data.channels) this._rebuildSensors();
     if (data.neurons) {
       for (const nd of data.neurons) {
         const n = this.neurons.find(n => n.id === nd.id);
