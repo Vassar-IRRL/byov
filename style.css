@@ -141,3 +141,9 @@ header { display: flex; align-items: center; justify-content: space-between; }
 .tool.active { background: var(--motor); color: #06101f; border-color: var(--motor); font-weight: 600; }
 .presets { display: flex; flex-direction: column; gap: 6px; }
 .presets button { text-align: left; }
+
+/* Replay panel + scrub */
+#replay-panel.hidden { display: none; }
+#replay-scrub { accent-color: var(--motor); margin: 8px 0 2px; }
+.side button:disabled { opacity: .4; cursor: default; }
+#replay-name { color: var(--ink); }

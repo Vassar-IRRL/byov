@@ -45,6 +45,7 @@
       <h3>Edit arena</h3>
       <div class="tool-group" id="arena-tools">
         <button data-tool="light" class="tool active">Place light</button>
+        <button data-tool="erase-light" class="tool">Erase light</button>
         <button data-tool="wall" class="tool">Add wall</button>
         <button data-tool="erase" class="tool">Erase wall</button>
         <button data-tool="robot" class="tool">Place robot</button>
@@ -59,8 +60,22 @@
       <div class="row">
         <button id="btn-record">● Record</button>
         <button id="btn-export" disabled>⬇ Export</button>
+        <button id="btn-import">⬆ Import</button>
       </div>
+      <input type="file" id="file-import" accept="application/json,.json" style="display:none">
       <span id="rec-status" class="hint"></span>
+
+      <!-- Replay controls (shown only in replay mode) -->
+      <div id="replay-panel" class="hidden">
+        <h3>Replay</h3>
+        <p class="hint" id="replay-name"></p>
+        <div class="row">
+          <button id="btn-replay-play" class="primary">▶ Play</button>
+          <button id="btn-replay-exit">✕ Exit replay</button>
+        </div>
+        <input type="range" id="replay-scrub" min="0" max="100" value="0" style="width:100%">
+        <span class="hint" id="replay-frame"></span>
+      </div>
     </aside>
   </main>
 
