@@ -15,13 +15,14 @@
  */
 
 const COL = {
-  light: '#ffdd57', prox: '#ff6b6b', motor: '#58a6ff',
+  light: '#ffc83c', prox: '#ff69b4', motor: '#58a6ff',   // IR = pink (parent app)
   excite: '#3fb950', inhibit: '#f85149',
   deck: '#12161d', deckLine: '#3a4250', chassis: '#1a1f27',
   ink: '#e6edf3', dim: '#8b949e', tyre: '#0c0e12', tyreLine: '#2b3038',
 };
-// LDR colour-channel swatch colours (W/R/G/B). W shown as the warm LDR yellow.
-const LDR_CH_COL = { W: '#ffdd57', R: '#ff5a5a', G: '#50d25a', B: '#5a96ff' };
+// LDR colour-channel swatch colours (W/R/G/B) — EXACT parent-app values:
+//   W (255,200,60), R (220,60,60), G (60,200,60), B (80,140,255). IR = pink.
+const LDR_CH_COL = { W: '#ffc83c', R: '#dc3c3c', G: '#3cc83c', B: '#508cff' };
 
 export class EditorView {
   constructor(canvas, vehicle) {
@@ -264,7 +265,15 @@ export class EditorView {
       if (this.trimDrag) { this.trimDrag = null; if (this.onChange) this.onChange(); return; }
       if (this.dragFrom) {
         const dst = this._hit(p);
-        if (dst) this._tryConnect(this.dragFrom, dst);
+        // If released on the SAME LDR sensor header it started on (i.e. a click,
+        // not a drag-to-wire), cycle that LDR's colour channel. This makes the
+        // channel discoverable without needing right-click.
+        if (dst && dst === this.dragFrom && dst.kind === 'sensor-out'
+            && this.v.loadout[dst.mountId] === 'LDR') {
+          this._cycleChannel(dst.mountId);
+        } else if (dst) {
+          this._tryConnect(this.dragFrom, dst);
+        }
         this.dragFrom = null; this.dragXY = null; this.hoverHeader = null;
         this.draw(); if (this.onChange) this.onChange();
       }
@@ -279,17 +288,14 @@ export class EditorView {
         this.layout(); this.draw(); if (this.onChange) this.onChange();
       }
     });
-    // right-click an LDR to cycle its colour channel W -> R -> G -> B
+    // right-click an LDR also cycles its colour channel (W -> R -> G -> B)
     c.addEventListener('contextmenu', e => {
       e.preventDefault();
       const p = xy(e);
       const h = this._hit(p);
       if (h && h.kind === 'sensor-out' && this.v.loadout[h.mountId] === 'LDR') {
-        const order = ['W', 'R', 'G', 'B'];
-        const cur = this.v.channels[h.mountId] || 'W';
-        const next = order[(order.indexOf(cur) + 1) % order.length];
-        this.v.setChannel(h.mountId, next);
-        this.layout(); this.draw(); if (this.onChange) this.onChange();
+        this._cycleChannel(h.mountId);
+        this.draw(); if (this.onChange) this.onChange();
       }
     });
   }
@@ -311,6 +317,14 @@ export class EditorView {
     t = Math.max(0, Math.min(1, t));
     return Math.hypot(p.x - (a.x + t * ex), p.y - (a.y + t * ey)) < 9;
   }
+  _cycleChannel(mountId) {
+    const order = ['W', 'R', 'G', 'B'];
+    const cur = this.v.channels[mountId] || 'W';
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    this.v.setChannel(mountId, next);
+    this.layout();
+  }
+
   _tryConnect(from, to) {
     if (from.kind === 'sensor-out' && to.kind === 'neuron-in')
       this.v.connect(from.sensorId, to.neuronId, to.sign);

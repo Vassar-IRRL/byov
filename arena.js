@@ -84,7 +84,7 @@ export class Renderer {
     ctx.strokeRect(this.tx(0), this.ty(A.H), this.m(A.W), this.m(A.H));
 
     // light sources (glow), tinted by colour
-    const LIGHT_RGB = { white: '255,221,87', red: '255,90,90', green: '80,210,90', blue: '90,150,255' };
+    const LIGHT_RGB = { white: '255,200,60', red: '220,60,60', green: '60,200,60', blue: '80,140,255' };
     for (const L of A.lights) {
       const rgb = LIGHT_RGB[L.color] || LIGHT_RGB.white;
       const r = this.m(0.08) * (L.intensity || 1);
