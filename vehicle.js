@@ -23,13 +23,19 @@ export class Vehicle {
     // Fixed sensor MOUNT POINTS at the front. The player chooses what sensor
     // (LDR / IR / none) occupies each mount. Placement is static for v1.
     // mount.x = body-frame right(+)/left(-), mount.y = forward(+); angle° CCW.
+    // Fixed sensor MOUNT POINTS at the front, matching the physical robot:
+    //   two LDRs OUTBOARD, angled outward (the white posts);
+    //   two IRs INBOARD, pointing forward (the black rectangles).
+    // Front edge, left->right: LDR_L, IR_L, IR_R, LDR_R.
+    // mount.x = right(+)/left(-), mount.y = forward(+); angle° CCW from forward.
     this.mountPoints = [
-      { id: 'm_FL', x: -0.030, y: 0.050, angle:  30 },  // front-left, splayed left
-      { id: 'm_FC', x:  0.000, y: 0.055, angle:   0 },  // front-centre, forward
-      { id: 'm_FR', x:  0.030, y: 0.050, angle: -30 },  // front-right, splayed right
+      { id: 'LDR_L', x: -0.038, y: 0.050, angle:  35 },  // outboard left, splayed
+      { id: 'IR_L',  x: -0.015, y: 0.055, angle:   0 },  // inboard left, forward
+      { id: 'IR_R',  x:  0.015, y: 0.055, angle:   0 },  // inboard right, forward
+      { id: 'LDR_R', x:  0.038, y: 0.050, angle: -35 },  // outboard right, splayed
     ];
-    // Which sensor type sits at each mount (default loadout: two LDRs + one IR).
-    this.loadout = { m_FL: 'LDR', m_FC: 'IR', m_FR: 'LDR' };
+    // Default loadout: LDRs outboard, IRs inboard (the physical configuration).
+    this.loadout = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' };
 
     this._rebuildSensors();
 

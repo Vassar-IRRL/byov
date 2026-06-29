@@ -48,15 +48,15 @@ tabRun.addEventListener('click', showRun);
 
 // ── Presets ──
 const PRESETS = {
-  'Vehicle 1 (alive)': v => { clearWiring(v); v.connect('m_FL', 'n_L', +1); v.connect('m_FL', 'n_R', +1); },
-  'Vehicle 2a (coward)': v => { clearWiring(v); v.setBias('n_L', .15); v.setBias('n_R', .15); v.connect('m_FL', 'n_L', +1); v.connect('m_FR', 'n_R', +1); },
-  'Vehicle 2b (aggressor)': v => { clearWiring(v); v.setBias('n_L', .15); v.setBias('n_R', .15); v.connect('m_FR', 'n_L', +1); v.connect('m_FL', 'n_R', +1); },
-  'Vehicle 3a (love)': v => { clearWiring(v); v.setBias('n_L', .6); v.setBias('n_R', .6); v.connect('m_FL', 'n_L', -1); v.connect('m_FR', 'n_R', -1); },
-  'Vehicle 3b (explorer)': v => { clearWiring(v); v.setBias('n_L', .6); v.setBias('n_R', .6); v.connect('m_FR', 'n_L', -1); v.connect('m_FL', 'n_R', -1); },
+  'Vehicle 1 (alive)': v => { clearWiring(v); v.connect('LDR_L', 'n_L', +1); v.connect('LDR_L', 'n_R', +1); },
+  'Vehicle 2a (coward)': v => { clearWiring(v); v.setBias('n_L', .15); v.setBias('n_R', .15); v.connect('LDR_L', 'n_L', +1); v.connect('LDR_R', 'n_R', +1); },
+  'Vehicle 2b (aggressor)': v => { clearWiring(v); v.setBias('n_L', .15); v.setBias('n_R', .15); v.connect('LDR_R', 'n_L', +1); v.connect('LDR_L', 'n_R', +1); },
+  'Vehicle 3a (love)': v => { clearWiring(v); v.setBias('n_L', .6); v.setBias('n_R', .6); v.connect('LDR_L', 'n_L', -1); v.connect('LDR_R', 'n_R', -1); },
+  'Vehicle 3b (explorer)': v => { clearWiring(v); v.setBias('n_L', .6); v.setBias('n_R', .6); v.connect('LDR_R', 'n_L', -1); v.connect('LDR_L', 'n_R', -1); },
 };
 function clearWiring(v) {
   // ensure default loadout has the two light sensors used by presets
-  v.loadout = { m_FL: 'LDR', m_FC: 'IR', m_FR: 'LDR' }; v._rebuildSensors();
+  v.loadout = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' }; v._rebuildSensors();
   for (const n of v.neurons) { n.inputs = []; n.bias = 0; }
 }
 function buildPresets() {
