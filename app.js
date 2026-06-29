@@ -73,7 +73,7 @@ function buildPresets() {
 }
 
 // ── Arena rendering / tools ──
-function drawArena() { renderer.draw(vehicle, { showCones, showGrid: editMode_arenaEditing() }); }
+function drawArena() { renderer.draw(vehicle, { showCones, showGrid: editMode_arenaEditing(), showHeadingArrow: editMode_arenaEditing() && !replay }); }
 function editMode_arenaEditing() { return !running; }  // show grid when not running
 
 document.querySelectorAll('#arena-tools .tool').forEach(b => {
@@ -82,7 +82,7 @@ document.querySelectorAll('#arena-tools .tool').forEach(b => {
     b.classList.add('active'); tool = b.dataset.tool;
     const hints = { light: 'Click the arena to place a light.', 'erase-light': 'Click a light to remove it.',
                     wall: 'Click grid cells to add walls.', erase: 'Click a wall to remove it.',
-                    robot: 'Click to set the robot start; click again to set its heading.' };
+                    robot: 'Click to place the robot, then drag from it to aim (drag direction = front).' };
     document.getElementById('tool-hint').textContent = hints[tool];
     robotPlaceStage = 0;
   });
@@ -100,8 +100,8 @@ arenaCanvas.addEventListener('click', e => {
   if (tool === 'light') {
     arena.addLight(arena.snap(w.x), arena.snap(w.y), 1);
   } else if (tool === 'erase-light') {
-    // remove the nearest light within a small radius
-    let best = -1, bestD = 0.08;
+    // remove the nearest light to the click (generous radius — the glow is big)
+    let best = -1, bestD = 0.20;
     arena.lights.forEach((L, i) => {
       const d = Math.hypot(L.x - w.x, L.y - w.y);
       if (d < bestD) { bestD = d; best = i; }
@@ -120,19 +120,42 @@ arenaCanvas.addEventListener('click', e => {
     });
     if (best >= 0) arena.walls.splice(best, 1);
   } else if (tool === 'robot') {
-    if (robotPlaceStage === 0) {
-      arena.robotStart.x = arena.snap(w.x); arena.robotStart.y = arena.snap(w.y);
-      robotPlaceStage = 1;
-      document.getElementById('tool-hint').textContent = 'Now click to set the heading.';
-    } else {
-      const dx = w.x - arena.robotStart.x, dy = w.y - arena.robotStart.y;
-      arena.robotStart.heading = Math.atan2(dy, dx);
-      robotPlaceStage = 0;
-      document.getElementById('tool-hint').textContent = 'Robot start set. Place lights/walls or Run.';
-    }
+    // Single click places the robot at the click point; heading is then set by
+    // DRAGGING (handled in mousedown/mousemove/mouseup below). One click = place.
+    arena.robotStart.x = arena.snap(w.x);
+    arena.robotStart.y = arena.snap(w.y);
     spawnVehicle();
+    document.getElementById('tool-hint').textContent =
+      'Placed. Now DRAG from the robot to aim it (drag direction = front).';
   }
   drawArena();
+});
+
+// Drag-to-aim: when the robot tool is active, dragging sets the start heading.
+let aiming = false;
+function arenaXY(e) {
+  const r = arenaCanvas.getBoundingClientRect();
+  const px = (e.clientX - r.left) * (arenaCanvas.width / r.width);
+  const py = (e.clientY - r.top) * (arenaCanvas.height / r.height);
+  return renderer.toWorld(px, py);
+}
+arenaCanvas.addEventListener('mousedown', e => {
+  if (running || replay || tool !== 'robot') return;
+  const w = arenaXY(e);
+  // start aiming if pressing near the robot start
+  if (Math.hypot(w.x - arena.robotStart.x, w.y - arena.robotStart.y) < 0.18) {
+    aiming = true;
+    document.getElementById('tool-hint').textContent = 'Aiming… release to set the front direction.';
+  }
+});
+arenaCanvas.addEventListener('mousemove', e => {
+  if (!aiming) return;
+  const w = arenaXY(e);
+  const dx = w.x - arena.robotStart.x, dy = w.y - arena.robotStart.y;
+  if (Math.hypot(dx, dy) > 0.02) { arena.robotStart.heading = Math.atan2(dy, dx); spawnVehicle(); drawArena(); }
+});
+arenaCanvas.addEventListener('mouseup', () => {
+  if (aiming) { aiming = false; document.getElementById('tool-hint').textContent = 'Robot aimed. Drag again to re-aim, or pick another tool.'; }
 });
 
 function segDist(px, py, w) {
@@ -205,7 +228,12 @@ function doImport(file) {
     if (!data.frames || !data.frames.length || !data.meta) {
       document.getElementById('rec-status').textContent = 'That file has no recorded frames.'; return;
     }
-    enterReplay(data, file.name);
+    try {
+      enterReplay(data, file.name);
+      document.getElementById('rec-status').textContent = 'Replaying ' + file.name + '.';
+    } catch (err) {
+      document.getElementById('rec-status').textContent = 'Import failed: ' + err.message;
+    }
   };
   reader.readAsText(file);
 }

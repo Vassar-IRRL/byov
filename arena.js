@@ -151,6 +151,13 @@ export class Renderer {
     // motors on the sides
     ctx.fillStyle = '#58a6ff';
     ctx.fillRect(-halfW - 4, -6, 4, 12); ctx.fillRect(halfW, -6, 4, 12);
+    // prominent heading arrow (shown when editing, so orientation is obvious)
+    if (opts.showHeadingArrow) {
+      const aLen = halfL + 22;
+      ctx.strokeStyle = '#ffdd57'; ctx.fillStyle = '#ffdd57'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -aLen); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, -aLen); ctx.lineTo(-6, -aLen + 10); ctx.lineTo(6, -aLen + 10); ctx.closePath(); ctx.fill();
+    }
     ctx.restore();
 
     // sensor dots
