@@ -6,13 +6,16 @@ BugWorks' omnidirectional approximation.
 
 ## Two screens (toggle in the header)
 - **Build robot** — the rectangular AnaBBot drawn top-down (motors on the sides,
-  sensors at the front). Overlaid neuron/wiring editor: drag a wire from a front
-  sensor to a neuron's E (excite) or I (inhibit) input; each neuron drives its
-  motor; drag a trimpot for bias. Double-click a sensor to change its type
-  (LDR / IR / none). Presets build Braitenberg Vehicles 1–3b.
-- **Arena & run** — full-screen grid arena. Tools: place lights, add/erase walls
-  on the grid, place the robot (position + heading). Run / Reset, sensor-cone
-  toggle, and Record → Export (JSON) for lab write-ups.
+  sensors at the front). Overlaid wiring editor: by DEFAULT you drag a wire from
+  a front sensor straight to a motor's FORWARD or REVERSE bank (four sockets
+  each, like the board's FL/BL and FR/BR) — no neurons involved. Motors have no
+  excite/inhibit: you choose a direction, and a reverse wire subtracts from
+  forward, exactly as (FL - BL) in engine/vehicle.py. Wire COLOUR is WEIGHT (blue 1x, green 2x, red 3x), matching
+  the physical board and engine/signals.py; excite vs inhibit comes from which
+  input the wire lands on. Meters M1/M2/M3 are permanently installed, take one
+  wire each and are display only. One shared pot between the motors sets a
+  resting speed. Neurons are OPTIONAL: the +/- buttons beside the robot add and
+  remove them (up to 6, LIFO), laid out 3 rows of 2 like the board.
 
 ## Run it
 Hosted: open the GitHub Pages link for this repo. (Must be served over http —
@@ -22,7 +25,7 @@ http://localhost:8000 .)
 ## Files
 - index.html / style.css — two-screen UI
 - sim.js         — physics: differential drive + DIRECTIONAL sensors (core)
-- vehicle.js     — rectangular body, fixed front mounts, neurons (v1), wiring
+- vehicle.js     — body, front mounts, optional neurons, meters, weighted wiring
 - editor_view.js — Screen 1: robot + wiring editor (drag-to-connect)
 - arena.js       — world, grid editing, canvas rendering
 - app.js         — screen toggle, tools, run loop, presets, record/export

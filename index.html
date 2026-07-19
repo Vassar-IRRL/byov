@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Build Your Own Vehicle</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
   <header>
@@ -25,11 +25,15 @@
       <h3>Presets</h3>
       <div class="presets" id="presets"></div>
       <h3>How to wire</h3>
-      <p class="hint">Drag from a front sensor to a neuron's <b style="color:#3fb950">E</b> (excite) or <b style="color:#f85149">I</b> (inhibit) input. Each neuron drives its motor.</p>
-      <p class="hint">Drag a neuron's trimpot up or down to set its bias.</p>
-      <p class="hint">Double-click a sensor to change its type (LDR → IR → none).</p>
-      <p class="hint"><b>Click an LDR</b> to cycle its colour channel (White → Red → Green → Blue) — the sensor recolours to show its channel. A coloured channel only responds to lights of that colour; White responds to all.</p>
-    </aside>
+      <ul class="hints">
+        <li>Drag a sensor straight to a motor's <b style="color:#7fb069">FWD</b> or <b style="color:#c98b5e">REV</b> bank (4 sockets each). Neurons have <b style="color:#3fb950">E</b>/<b style="color:#f85149">I</b> inputs; motors have direction.</li>
+        <li>Wire colour = weight: <b style="color:#4d8cff">blue 1x</b>, <b style="color:#3fb950">green 2x</b>, <b style="color:#f85149">red 3x</b>. Left-click cycles, right-click removes.</li>
+        <li>Meters <b>M1–M3</b>: one wire each, display only. Pot between motors = resting speed.</li>
+        <li><b>+</b> / <b>−</b> beside the robot add/remove neurons (max 6, last-in-first-out).</li>
+        <li>Double-click a sensor to change type (LDR → IR → none).</li>
+        <li><b>Single-click LDR</b> to cycle color channels: <b style="color:#dc3c3c">R</b>, <b style="color:#3cc83c">G</b>, <b style="color:#508cff">B</b>, <b style="color:#ffc83c">W</b> (any color ambient)</li>
+      </ul>
+</aside>
   </main>
 
   <!-- ── SCREEN 2: Arena & run ── -->
@@ -90,6 +94,6 @@
   </main>
 
   <footer><span>PAW Robotics · BYOV web</span></footer>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.js?v=7"></script>
 </body>
 </html>

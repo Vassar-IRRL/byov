@@ -1,9 +1,9 @@
 /* app.js — two-screen BYOV: Build (robot+wiring) and Arena&run.
  */
-import { Vehicle } from './vehicle.js';
-import { Arena, Renderer } from './arena.js';
-import { EditorView } from './editor_view.js';
-import { driveStep } from './sim.js';
+import { Vehicle } from './vehicle.js?v=7';
+import { Arena, Renderer } from './arena.js?v=7';
+import { EditorView } from './editor_view.js?v=7';
+import { driveStep } from './sim.js?v=7';
 
 const arena = new Arena();
 const vehicle = new Vehicle();
@@ -50,17 +50,34 @@ tabBuild.addEventListener('click', showBuild);
 tabRun.addEventListener('click', showRun);
 
 // ── Presets ──
+// All five wire sensors STRAIGHT to motors — no neurons needed. Motors have a
+// FORWARD and a REVERSE bank (like the board's FL/BL, FR/BR); there is no
+// excite/inhibit at a motor, you choose the direction. Wire colour is weight
+// (blue 1x, green 2x, red 3x). 3a/3b lean on the shared pot for a resting
+// forward speed that the light then works against.
 const PRESETS = {
-  'Vehicle 1 (alive)': v => { clearWiring(v); v.connect('LDR_L', 'n_L', +1); v.connect('LDR_L', 'n_R', +1); },
-  'Vehicle 2a (coward)': v => { clearWiring(v); v.setBias('n_L', .15); v.setBias('n_R', .15); v.connect('LDR_L', 'n_L', +1); v.connect('LDR_R', 'n_R', +1); },
-  'Vehicle 2b (aggressor)': v => { clearWiring(v); v.setBias('n_L', .15); v.setBias('n_R', .15); v.connect('LDR_R', 'n_L', +1); v.connect('LDR_L', 'n_R', +1); },
-  'Vehicle 3a (love)': v => { clearWiring(v); v.setBias('n_L', .6); v.setBias('n_R', .6); v.connect('LDR_L', 'n_L', -1); v.connect('LDR_R', 'n_R', -1); },
-  'Vehicle 3b (explorer)': v => { clearWiring(v); v.setBias('n_L', .6); v.setBias('n_R', .6); v.connect('LDR_R', 'n_L', -1); v.connect('LDR_L', 'n_R', -1); },
+  'Vehicle 1 (alive)': v => { clearWiring(v);
+    v.connect('LDR_L', 'L', 'fwd', 'blue'); v.connect('LDR_L', 'R', 'fwd', 'blue'); },
+
+  'Vehicle 2a (coward)': v => { clearWiring(v); v.setBias(.15);
+    v.connect('LDR_L', 'L', 'fwd', 'blue'); v.connect('LDR_R', 'R', 'fwd', 'blue'); },
+
+  'Vehicle 2b (aggressor)': v => { clearWiring(v); v.setBias(.15);
+    v.connect('LDR_R', 'L', 'fwd', 'blue'); v.connect('LDR_L', 'R', 'fwd', 'blue'); },
+
+  'Vehicle 3a (love)': v => { clearWiring(v); v.setBias(.6);
+    v.connect('LDR_L', 'L', 'rev', 'blue'); v.connect('LDR_R', 'R', 'rev', 'blue'); },
+
+  'Vehicle 3b (explorer)': v => { clearWiring(v); v.setBias(.6);
+    v.connect('LDR_R', 'L', 'rev', 'blue'); v.connect('LDR_L', 'R', 'rev', 'blue'); },
 };
 function clearWiring(v) {
   // ensure default loadout has the two light sensors used by presets
   v.loadout = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' }; v._rebuildSensors();
-  for (const n of v.neurons) { n.inputs = []; n.bias = 0; }
+  // Sever the wiring, but KEEP any neurons the player has added, along with
+  // their biases (and their meter hook-ups). Presets define the direct
+  // sensor->motor circuit; the neurons stay on the board to be re-used.
+  v.clearWiring();
 }
 function buildPresets() {
   const box = document.getElementById('presets');
@@ -74,7 +91,7 @@ function buildPresets() {
 }
 
 // ── Arena rendering / tools ──
-function drawArena() { renderer.draw(vehicle, { showCones, showGrid: editMode_arenaEditing(), showHeadingArrow: editMode_arenaEditing() && !replay }); }
+function drawArena() { renderer.draw(vehicle, { showCones, showGrid: editMode_arenaEditing(), showHeadingArrow: editMode_arenaEditing() && !replay, running }); }
 function editMode_arenaEditing() { return !running; }  // show grid when not running
 
 document.querySelectorAll('#arena-tools .tool').forEach(b => {
@@ -183,11 +200,11 @@ function step(t) {
   if (!running) return;
   const dt = Math.min(0.05, (t - lastT) / 1000 || 0.05); lastT = t;
   const readings = vehicle.readSensors(arena.lights, arena.walls);
-  const m = vehicle.evaluate(readings);
+  const m = vehicle.evaluate(readings);      // also refreshes meter values
   driveStep(vehicle, m.L, m.R, dt, arena.walls);
   renderer.pushTrail(vehicle.x, vehicle.y);
   if (recording) recordData.frames.push({ x: +vehicle.x.toFixed(4), y: +vehicle.y.toFixed(4), h: +vehicle.heading.toFixed(4) });
-  renderer.draw(vehicle, { showCones, showGrid: false });
+  renderer.draw(vehicle, { showCones, showGrid: false, running: true });
   raf = requestAnimationFrame(step);
 }
 function doRun() {
@@ -282,11 +299,11 @@ function renderReplayFrame(i) {
   if (!f) return;
   vehicle.x = f.x; vehicle.y = f.y; vehicle.heading = f.h;
   // recompute sensor readings from the recorded arena so cones are faithful
-  vehicle.readSensors(arena.lights, arena.walls);
+  vehicle.evaluate(vehicle.readSensors(arena.lights, arena.walls));  // refresh meters
   // trail up to current frame
   renderer.clearTrail();
   for (let k = 0; k <= i; k++) renderer.pushTrail(replay.data.frames[k].x, replay.data.frames[k].y);
-  renderer.draw(vehicle, { showCones, showGrid: false });
+  renderer.draw(vehicle, { showCones, showGrid: false, running: true });
   replay.frame = i;
   document.getElementById('replay-scrub').value = i;
   document.getElementById('replay-frame').textContent = 'frame ' + i + ' / ' + (replay.data.frames.length - 1);

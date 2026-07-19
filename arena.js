@@ -2,7 +2,7 @@
  * canvas rendering (arena, vehicle body, directional sensor cones, trail).
  * Mirrors the physical PAW arena proportions (1.2 m × 1.6 m).
  */
-import { PHYS, LDR, sensorPose } from './sim.js';
+import { PHYS, LDR, sensorPose } from './sim.js?v=7';
 
 export class Arena {
   constructor(width = 1.2, height = 1.6) {
@@ -45,14 +45,85 @@ export class Renderer {
     this._resize();
   }
   _resize() {
-    // Fit arena into the canvas with margin, preserving aspect ratio.
+    // Fit arena into the canvas, leaving a gutter on the LEFT for the meter HUD.
     const c = this.canvas;
     const pad = 16;
-    const availW = c.width - pad * 2, availH = c.height - pad * 2;
+    this.hudW = 118;                      // left gutter: M1 M2 M3 LED bars, side by side
+    const availW = c.width - pad * 2 - this.hudW, availH = c.height - pad * 2;
     this.scale = Math.min(availW / this.arena.W, availH / this.arena.H);
-    this.ox = pad + (availW - this.arena.W * this.scale) / 2;
+    this.ox = pad + this.hudW + (availW - this.arena.W * this.scale) / 2;
     this.oy = pad + (availH - this.arena.H * this.scale) / 2;
   }
+
+  /* Meter HUD — three 10-segment LED bars standing SIDE BY SIDE in the gutter
+   * to the left of the arena, ordered M1 M2 M3 left-to-right, matching the
+   * physical robot and the Build Robot view. M1/M3 red, M2 white (the game's
+   * colours). Housing and unlit LEDs are always visible; lit segments glow
+   * while running. */
+  _drawMeterHUD(vehicle, running) {
+    if (!vehicle || !vehicle.meters) return;
+    const ctx = this.ctx;
+    const SEGMENTS = 10, segW = 18, segH = 9, segGap = 2;
+    const barH = SEGMENTS * (segH + segGap) - segGap;     // 108
+    const LIT  = { M1: '#dc3232', M2: '#f0f0f0', M3: '#dc3232' };
+    const DIM  = { M1: '#4a1414', M2: '#4a4a4a', M3: '#4a1414' };
+    const OFF  = '#262b33';                    // unlit LED, visible on the panel
+    const order = ['M1', 'M2', 'M3'];          // left -> right, as on the robot
+    const pitch = 34;                          // centre-to-centre spacing
+    const groupW = (order.length - 1) * pitch;
+    const cx0 = 16 + this.hudW / 2 - groupW / 2;
+    const by = Math.max(24, (this.canvas.height - barH) / 2 - 30);
+
+    // header for the whole HUD
+    ctx.fillStyle = running ? '#c9d1d9' : '#6b7280';
+    ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
+    ctx.fillText('METERS', 16 + this.hudW / 2, by - 14);
+
+    order.forEach((id, i) => {
+      const mt  = vehicle.meters.find(m => m.id === id);
+      const val = (vehicle._meterVals && vehicle._meterVals[id]) || 0;
+      const lit = Math.floor(val * SEGMENTS);   // int() truncation, as in the game
+      const cxBar = cx0 + i * pitch;
+      const bx = cxBar - segW / 2;
+
+      // housing — always visible so the meters read as hardware when idle
+      ctx.fillStyle = '#0b0e13';
+      ctx.strokeStyle = running ? '#3a4250' : '#232a33';
+      ctx.lineWidth = 1.5;
+      this._rr(bx - 5, by - 5, segW + 10, barH + 10, 4);
+      ctx.fill(); ctx.stroke();
+
+      for (let seg = 0; seg < SEGMENTS; seg++) {
+        const sy = by + barH - seg * (segH + segGap) - segH;
+        const on = running && seg < lit;
+        ctx.fillStyle = on ? LIT[id] : (running ? DIM[id] : OFF);
+        if (on) { ctx.shadowColor = LIT[id]; ctx.shadowBlur = 10; }
+        this._rr(bx, sy, segW, segH, 2); ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // label + whatever is wired to it
+      ctx.fillStyle = running ? '#c9d1d9' : '#8b949e';
+      ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(id, cxBar, by + barH + 18);
+      ctx.fillStyle = '#6b7280'; ctx.font = '9px monospace';
+      ctx.fillText(mt && mt.input ? mt.input.srcId.replace('LDR_', 'L').replace('IR_', 'I') : '—',
+                   cxBar, by + barH + 29);
+    });
+  }
+
+  /* rounded-rect path helper (canvas roundRect isn't everywhere) */
+  _rr(x, y, w, h, r) {
+    const ctx = this.ctx;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
   // world (m) -> canvas (px). World y is up; canvas y is down -> flip.
   tx(x) { return this.ox + x * this.scale; }
   ty(y) { return this.oy + (this.arena.H - y) * this.scale; }
@@ -64,6 +135,7 @@ export class Renderer {
   draw(vehicle, opts = {}) {
     const ctx = this.ctx, A = this.arena;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this._drawMeterHUD(vehicle, !!opts.running);
 
     // arena floor
     ctx.fillStyle = '#0d1117';
