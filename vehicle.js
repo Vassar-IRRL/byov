@@ -20,13 +20,23 @@
  * Evaluation (feed-forward, so it can never loop):
  *     sensors -> neurons   N = clamp(bias + Σ sign*weight*sensor, 0, 1)
  *     sensors/neurons -> meters   M = clamp(weight*source, 0, 1)      [display]
- *     sensors/neurons -> motors   V = clamp(sharedBias + Σ sign*weight*src, 0, 1)
+ *     sensors/neurons -> motors   V = clamp(sharedBias + Σfwd - Σrev, -1, 1)
  */
-import { sensorPose, readLDR, readIR, clamp } from './sim.js?v=7';
+import { sensorPose, readLDR, readIR, clamp } from './sim.js?v=8';
 
 export const WIRE_WEIGHT = { blue: 1, green: 2, red: 3 };
 export const WIRE_COLORS = ['blue', 'green', 'red'];
 export const MAX_NEURONS = 6;
+
+// Sensors mount at discrete slots around the chassis PERIMETER. Slot 0 is dead
+// ahead; slots advance counter-clockwise (toward port) in 360/RING_SLOTS steps,
+// the same convention as a sensor's angle (degrees CCW from body +Y forward).
+export const RING_SLOTS = 24;                    // 15 deg apart
+export const ANGLE_STEP = 360 / RING_SLOTS;
+export const MAX_SENSORS = 8;
+
+/* Fold a degree value into (-180, 180]. */
+const norm180 = d => { d = ((d % 360) + 360) % 360; return d > 180 ? d - 360 : d; };
 export const MOTOR_SLOTS = 4;      // headers per motor bank, as on the board
 
 export class Vehicle {
@@ -37,11 +47,13 @@ export class Vehicle {
     this.bodyW = 0.090;   // m — width (left-right)
     this.bodyL = 0.110;   // m — length (front-back)
 
+    // Each mount is { id, slot, angle }. Position is DERIVED from the slot via
+    // slotPos(); angle is the facing, independent of where it sits.
     this.mountPoints = [
-      { id: 'LDR_L', x: -0.038, y: 0.050, angle:  35 },
-      { id: 'IR_L',  x: -0.015, y: 0.055, angle:   0 },
-      { id: 'IR_R',  x:  0.015, y: 0.055, angle:   0 },
-      { id: 'LDR_R', x:  0.038, y: 0.050, angle: -35 },
+      { id: 'LDR_L', slot:  2, angle:  35 },
+      { id: 'IR_L',  slot:  1, angle:   0 },
+      { id: 'IR_R',  slot: 23, angle:   0 },
+      { id: 'LDR_R', slot: 22, angle: -35 },
     ];
     this.loadout  = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' };
     this.channels = { LDR_L: 'W', IR_L: 'W', IR_R: 'W', LDR_R: 'W' };
@@ -78,12 +90,132 @@ export class Vehicle {
     this._motorCmd   = { L: 0, R: 0 };
   }
 
+  // ── The mounting ring ────────────────────────────────────────────────────
+  /* Bearing of a ring slot: degrees CCW from forward, in (-180, 180]. */
+  slotBearing(slot) {
+    return norm180((((slot % RING_SLOTS) + RING_SLOTS) % RING_SLOTS) * ANGLE_STEP);
+  }
+
+  /* Body-frame position of a ring slot: where a ray leaving the body centre at
+   * that bearing crosses the chassis outline. Body frame is +X right, +Y
+   * forward, so a CCW (port-side) bearing has a negative x. */
+  slotPos(slot) {
+    const th = this.slotBearing(slot) * Math.PI / 180;
+    const dx = -Math.sin(th), dy = Math.cos(th);
+    const hx = this.bodyW / 2, hy = this.bodyL / 2;
+    const tx = Math.abs(dx) > 1e-9 ? hx / Math.abs(dx) : Infinity;
+    const ty = Math.abs(dy) > 1e-9 ? hy / Math.abs(dy) : Infinity;
+    const r = Math.min(tx, ty);
+    return { x: dx * r, y: dy * r };
+  }
+
+  /* The stock four mounts. Presets restore these: a preset describes a known
+   * vehicle, so it needs the sensors that vehicle has, whatever the student
+   * has since added, removed or moved. */
+  resetMounts() {
+    this.mountPoints = [
+      { id: 'LDR_L', slot:  2, angle:  35 },
+      { id: 'IR_L',  slot:  1, angle:   0 },
+      { id: 'IR_R',  slot: 23, angle:   0 },
+      { id: 'LDR_R', slot: 22, angle: -35 },
+    ];
+    this.loadout  = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' };
+    this.channels = { LDR_L: 'W', IR_L: 'W', IR_R: 'W', LDR_R: 'W' };
+    this._rebuildSensors();
+    this._pruneDeadInputs();
+  }
+
+  occupiedSlots() { return new Set(this.mountPoints.map(m => m.slot)); }
+
+  /* Nearest free slot to `preferred`, searching outward both ways. */
+  freeSlot(preferred = 0) {
+    const used = this.occupiedSlots();
+    for (let d = 0; d < RING_SLOTS; d++) {
+      for (const cand of [preferred + d, preferred - d]) {
+        const k = ((cand % RING_SLOTS) + RING_SLOTS) % RING_SLOTS;
+        if (!used.has(k)) return k;
+      }
+    }
+    return null;
+  }
+
+  _nextSensorId() {
+    const taken = new Set(this.mountPoints.map(m => m.id));
+    let n = 1;
+    while (taken.has('S' + n)) n++;
+    return 'S' + n;
+  }
+
+  /* Add a sensor, capped at MAX_SENSORS. Defaults to the free slot nearest the
+   * front, aimed straight out from the hull. Returns the new id, or null. */
+  addSensor(type = 'LDR', slot = null) {
+    if (this.mountPoints.length >= MAX_SENSORS) return null;
+    const k = (slot == null) ? this.freeSlot(0)
+                             : ((slot % RING_SLOTS) + RING_SLOTS) % RING_SLOTS;
+    if (k == null || this.occupiedSlots().has(k)) return null;
+    const id = this._nextSensorId();
+    this.mountPoints.push({ id, slot: k, angle: this.slotBearing(k) });
+    this.loadout[id] = type;
+    this.channels[id] = 'W';
+    this._rebuildSensors();
+    return id;
+  }
+
+  /* Remove a sensor and any wiring that fed from it. Returns the mount, or null. */
+  removeSensor(id) {
+    const i = this.mountPoints.findIndex(m => m.id === id);
+    if (i < 0) return null;
+    const gone = this.mountPoints.splice(i, 1)[0];
+    delete this.loadout[id];
+    delete this.channels[id];
+    this._rebuildSensors();
+    this._pruneDeadInputs();
+    return gone;
+  }
+
+  /* Move a sensor to another slot, carrying its facing with it: a sensor aimed
+   * 10 deg off the hull normal is still 10 deg off the normal after the move.
+   * An occupied slot is refused, not swapped. */
+  setSensorSlot(id, slot) {
+    const k = ((slot % RING_SLOTS) + RING_SLOTS) % RING_SLOTS;
+    const mp = this.mountPoints.find(m => m.id === id);
+    if (!mp || this.mountPoints.some(m => m.id !== id && m.slot === k)) return false;
+    const offNormal = norm180(mp.angle - this.slotBearing(mp.slot));
+    mp.slot = k;
+    mp.angle = norm180(this.slotBearing(k) + offNormal);
+    this._rebuildSensors();
+    return true;
+  }
+
+  /* Facing, in degrees CCW from forward. Stored as given (normalised only) —
+   * the DEFAULT mounts sit at +/-35 deg, which is not a multiple of ANGLE_STEP,
+   * so snapping here would silently re-aim the stock vehicle. Discreteness
+   * comes from rotateSensor() stepping by ANGLE_STEP, not from absolute
+   * alignment to the ring. */
+  setSensorAngle(id, deg) {
+    const mp = this.mountPoints.find(m => m.id === id);
+    if (!mp) return false;
+    mp.angle = norm180(deg);
+    this._rebuildSensors();
+    return true;
+  }
+  rotateSensor(id, steps = 1) {
+    const mp = this.mountPoints.find(m => m.id === id);
+    return mp ? this.setSensorAngle(id, mp.angle + steps * ANGLE_STEP) : false;
+  }
+  /* Re-aim a sensor straight out from the hull at its current slot. */
+  aimSensorOutward(id) {
+    const mp = this.mountPoints.find(m => m.id === id);
+    return mp ? this.setSensorAngle(id, this.slotBearing(mp.slot)) : false;
+  }
+
   _rebuildSensors() {
     this.sensors = [];
     for (const mp of this.mountPoints) {
       const type = this.loadout[mp.id];
       if (type === 'LDR' || type === 'IR') {
-        const s = { id: mp.id, type, mount: { x: mp.x, y: mp.y, angle: mp.angle } };
+        const p = this.slotPos(mp.slot);
+        const s = { id: mp.id, type, mount: { x: p.x, y: p.y, angle: mp.angle } };
         if (type === 'LDR') s.channel = this.channels[mp.id] || 'W';
         this.sensors.push(s);
       }
@@ -256,6 +388,8 @@ export class Vehicle {
 
   toJSON() {
     return {
+      version:  2,                                  // 2 = perimeter ring mounts
+      mounts:   this.mountPoints.map(m => ({ ...m })),
       loadout:  { ...this.loadout },
       channels: { ...this.channels },
       sensors:  this.sensors.map(s => ({ ...s })),
@@ -269,9 +403,19 @@ export class Vehicle {
     };
   }
   loadJSON(data) {
+    // v2 files carry their own mounts. Pre-ring files don't: leave the default
+    // four in place and let their loadout/channels apply on top, which is what
+    // those files described anyway.
+    if (Array.isArray(data.mounts)) {
+      this.mountPoints = data.mounts.slice(0, MAX_SENSORS).map(m => ({
+        id: m.id,
+        slot: ((m.slot % RING_SLOTS) + RING_SLOTS) % RING_SLOTS,
+        angle: norm180(m.angle || 0),
+      }));
+    }
     if (data.loadout)  this.loadout  = { ...this.loadout,  ...data.loadout };
     if (data.channels) this.channels = { ...this.channels, ...data.channels };
-    if (data.loadout || data.channels) this._rebuildSensors();
+    if (data.mounts || data.loadout || data.channels) this._rebuildSensors();
     if (typeof data.bias === 'number') this.bias = clamp(data.bias, -1, 1);
     if (data.neurons) {
       this.neurons = data.neurons.slice(0, MAX_NEURONS).map(nd => ({

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Build Your Own Vehicle</title>
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <header>
@@ -23,15 +23,17 @@
     <canvas id="editor" width="600" height="660"></canvas>
     <aside class="side">
       <h3>Presets</h3>
+      <p class="hint">Locked until you build each vehicle yourself — then tick ○ to unlock it.</p>
       <div class="presets" id="presets"></div>
       <h3>How to wire</h3>
       <ul class="hints">
         <li>Drag a sensor straight to a motor's <b style="color:#7fb069">FWD</b> or <b style="color:#c98b5e">REV</b> bank (4 sockets each). Neurons have <b style="color:#3fb950">E</b>/<b style="color:#f85149">I</b> inputs; motors have direction.</li>
         <li>Wire colour = weight: <b style="color:#4d8cff">blue 1x</b>, <b style="color:#3fb950">green 2x</b>, <b style="color:#f85149">red 3x</b>. Left-click cycles, right-click removes.</li>
         <li>Meters <b>M1–M3</b>: one wire each, display only. Pot between motors = resting speed.</li>
-        <li><b>+</b> / <b>−</b> beside the robot add/remove neurons (max 6, last-in-first-out).</li>
+        <li><b>+</b> / <b>−</b> beside the robot add/remove <b>neurons</b> (max 6) and <b>sensors</b> (max 8), last-in-first-out.</li>
+        <li><b>Drag a sensor module</b> to slide it around the hull; <b>scroll over it</b> to rotate its aim 15° a step. Drag its inboard pin to wire it.</li>
         <li>Double-click a sensor to change type (LDR → IR → none).</li>
-        <li><b>Single-click LDR</b> to cycle color channels: <b style="color:#dc3c3c">R</b>, <b style="color:#3cc83c">G</b>, <b style="color:#508cff">B</b>, <b style="color:#ffc83c">W</b> (any color ambient)</li>
+        <li><b>Single-click LDR</b> to cycle color channels: <b style="color:#ffc83c">W</b> → <b style="color:#dc3c3c">R</b> → <b style="color:#3cc83c">G</b> → <b style="color:#508cff">B</b> (W = any color ambient)</li>
       </ul>
 </aside>
   </main>
@@ -94,6 +96,6 @@
   </main>
 
   <footer><span>PAW Robotics · BYOV web</span></footer>
-  <script type="module" src="app.js?v=7"></script>
+  <script type="module" src="app.js?v=8"></script>
 </body>
 </html>

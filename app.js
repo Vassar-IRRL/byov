@@ -1,9 +1,9 @@
 /* app.js — two-screen BYOV: Build (robot+wiring) and Arena&run.
  */
-import { Vehicle } from './vehicle.js?v=7';
-import { Arena, Renderer } from './arena.js?v=7';
-import { EditorView } from './editor_view.js?v=7';
-import { driveStep } from './sim.js?v=7';
+import { Vehicle } from './vehicle.js?v=8';
+import { Arena, Renderer } from './arena.js?v=8';
+import { EditorView } from './editor_view.js?v=8';
+import { driveStep } from './sim.js?v=8';
 
 const arena = new Arena();
 const vehicle = new Vehicle();
@@ -72,21 +72,64 @@ const PRESETS = {
     v.connect('LDR_R', 'L', 'rev', 'blue'); v.connect('LDR_L', 'R', 'rev', 'blue'); },
 };
 function clearWiring(v) {
-  // ensure default loadout has the two light sensors used by presets
-  v.loadout = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' }; v._rebuildSensors();
+  // Restore the stock four mounts: a preset describes a specific vehicle, so it
+  // needs that vehicle's sensors back at their stock slots and angles. Sensors
+  // the student added, moved or removed do NOT survive a preset.
+  v.resetMounts();
   // Sever the wiring, but KEEP any neurons the player has added, along with
   // their biases (and their meter hook-ups). Presets define the direct
   // sensor->motor circuit; the neurons stay on the board to be re-used.
   v.clearWiring();
 }
+// ── Preset gating ──
+// Presets start LOCKED: a preset is the answer to an exercise, so it stays out
+// of reach until the student says they have built that vehicle themselves.
+// This is deliberately on the honour system -- there is no wiring check -- so
+// an instructor, not the program, decides whether the claim holds.
+const BUILT_KEY = 'byov.presetsBuilt';
+
+function loadBuilt() {
+  try { return new Set(JSON.parse(localStorage.getItem(BUILT_KEY) || '[]')); }
+  catch (e) { return new Set(); }        // private mode / storage disabled
+}
+function saveBuilt(set) {
+  try { localStorage.setItem(BUILT_KEY, JSON.stringify([...set])); } catch (e) {}
+}
+let presetsBuilt = loadBuilt();
+
 function buildPresets() {
   const box = document.getElementById('presets');
   box.innerHTML = '';
   for (const name of Object.keys(PRESETS)) {
+    const unlocked = presetsBuilt.has(name);
+
+    const row = document.createElement('div');
+    row.className = 'preset-row';
+
     const b = document.createElement('button');
     b.textContent = name;
-    b.addEventListener('click', () => { PRESETS[name](vehicle); editor.layout(); editor.draw(); });
-    box.appendChild(b);
+    b.className = 'preset-load';
+    b.disabled = !unlocked;
+    b.title = unlocked ? 'Load this wiring'
+                       : 'Locked — build this vehicle yourself, then tick to unlock';
+    b.addEventListener('click', () => {
+      PRESETS[name](vehicle); editor.layout(); editor.draw();
+    });
+
+    const mark = document.createElement('button');
+    mark.className = 'preset-mark' + (unlocked ? ' on' : '');
+    mark.textContent = unlocked ? '✓' : '○';
+    mark.title = unlocked ? 'Built — click to lock again' : 'I built this: unlock the preset';
+    mark.addEventListener('click', () => {
+      if (presetsBuilt.has(name)) presetsBuilt.delete(name);
+      else presetsBuilt.add(name);
+      saveBuilt(presetsBuilt);
+      buildPresets();
+    });
+
+    row.appendChild(b);
+    row.appendChild(mark);
+    box.appendChild(row);
   }
 }
 
@@ -376,6 +419,8 @@ editor.onChange = () => {};
 
 // ── Init ──
 buildPresets();
-PRESETS['Vehicle 2b (aggressor)'](vehicle);
+// The vehicle starts UNWIRED. It used to boot with Vehicle 2b applied, which
+// would now hand out the answer to a locked preset before the student starts.
+vehicle.resetMounts();
 editor.layout(); editor.draw();
 showBuild();

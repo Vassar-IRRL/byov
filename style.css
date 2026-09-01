@@ -150,6 +150,18 @@ header { display: flex; align-items: center; justify-content: space-between; }
 .presets { display: flex; flex-direction: column; gap: 6px; }
 .presets button { text-align: left; }
 
+/* Presets are locked until the student marks the vehicle as built. */
+.preset-row { display: flex; gap: 6px; align-items: stretch; }
+.preset-row .preset-load { flex: 1; }
+.preset-row .preset-load:disabled {
+  opacity: .38; cursor: not-allowed; font-style: italic;
+}
+.preset-mark {
+  flex: 0 0 34px; text-align: center; padding: 0;
+  color: var(--ink-dim); font-family: var(--mono);
+}
+.preset-mark.on { color: var(--motor); border-color: var(--motor); }
+
 /* Replay panel + scrub */
 #replay-panel.hidden { display: none; }
 #replay-scrub { accent-color: var(--motor); margin: 8px 0 2px; }

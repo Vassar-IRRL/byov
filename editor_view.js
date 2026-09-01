@@ -15,7 +15,13 @@
  * Excite vs inhibit comes from which input the wire lands on (E or I), exactly
  * as on the board. LEFT-CLICK a wire to cycle its colour/weight; RIGHT-CLICK a
  * wire to remove it. By default you wire a sensor STRAIGHT to a motor.
+ *
+ * SENSORS mount on a discrete ring around the hull. Drag a sensor MODULE to
+ * slide it around the ring; drag its inboard PIN to run a wire. The wheel over
+ * a module rotates its facing one step.
  */
+
+import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=8';
 
 const COL = {
   prox: '#ff69b4', motor: '#58a6ff',
@@ -25,7 +31,10 @@ const COL = {
 };
 const LDR_CH_COL = { W: '#ffc83c', R: '#dc3c3c', G: '#3cc83c', B: '#508cff' };
 // Wire weight colours — blue 1x, green 2x, red 3x (engine/signals.py).
+// Presentation only: the hex for each weight colour. The SET of colours is
+// owned by WIRE_COLORS in vehicle.js — add one there and it needs a hex here.
 const WIRE_COL = { blue: '#4d8cff', green: '#3fb950', red: '#f85149' };
+const SENSOR_OUTSET = 24;   // px the module sits proud of the hull outline
 
 export class EditorView {
   constructor(canvas, vehicle) {
@@ -45,7 +54,10 @@ export class EditorView {
     this.headers = [];
 
     const margin = 90;
-    this.deck = { x: margin, y: 40, w: W - margin * 2, h: H - 80 };
+    // The vertical inset has to clear a sensor module (SENSOR_OUTSET plus its
+    // body and id label), because mounts now sit OUTSIDE the hull outline.
+    const vpad = SENSOR_OUTSET + 38;   // module body + its id label
+    this.deck = { x: margin, y: vpad, w: W - margin * 2, h: H - vpad * 2 };
     const d = this.deck;
     this.sx = d.w / (this.v.bodyW * 1.9);
     this.cx = d.x + d.w / 2;
@@ -54,13 +66,23 @@ export class EditorView {
     this.rowY    = [0.45, 0.59, 0.73].map(f => d.y + d.h * f);
     this.rearY   = d.y + d.h * 0.92;
 
-    // ── Sensors along the FRONT edge ──
+    // ── Sensors: mounted on the RING around the hull ──
+    // Body frame maps onto the deck rectangle: +X right, +Y forward (up).
+    this.deckCx = d.x + d.w / 2;
+    this.deckCy = d.y + d.h / 2;
+    this.bpx = d.w / this.v.bodyW;      // canvas px per body metre, across
+    this.bpy = d.h / this.v.bodyL;      // canvas px per body metre, along
     for (const mp of this.v.mountPoints) {
-      this.headers.push({
-        id: 'out_' + mp.id, kind: 'sensor-out', srcId: mp.id, mountId: mp.id,
-        x: this.cx + mp.x * this.sx, y: this.frontY, r: 11,
-        sensorType: this.v.loadout[mp.id], channel: this.v.channels[mp.id] || 'W',
-      });
+      const g = this._mountGeom(mp);
+      const shared = { mountId: mp.id, sensorType: this.v.loadout[mp.id],
+                       channel: this.v.channels[mp.id] || 'W' };
+      // The module: drag it to slide around the ring.
+      this.headers.push({ id: 'body_' + mp.id, kind: 'sensor-body',
+                          x: g.x, y: g.y, r: 13, angle: mp.angle, slot: mp.slot,
+                          nx: g.nx, ny: g.ny, ...shared });
+      // The output pin, inboard: drag it to run a wire.
+      this.headers.push({ id: 'out_' + mp.id, kind: 'sensor-out', srcId: mp.id,
+                          x: g.pin.x, y: g.pin.y, r: 7, ...shared });
     }
 
     // ── Meters M1..M3, just behind the sensors. One input each. ──
@@ -92,14 +114,14 @@ export class EditorView {
     // Each motor gets a FORWARD bank and a REVERSE bank of four grey headers,
     // like the board's FL/BL (and FR/BR) sockets. No excite/inhibit here — you
     // choose a direction, and a reverse wire subtracts from forward.
-    const SLOTS = 4, hgap = 14;
+    const hgap = 14;
     for (const m of this.v.motors) {
       const mx = (m.id === 'L') ? mlx : mrx;
       m._cx = mx; m._cy = this.rearY; m._r = 13;
       m._bankY = { fwd: this.rearY - 54, rev: this.rearY - 30 };
       for (const dir of ['fwd', 'rev']) {
-        for (let k = 0; k < SLOTS; k++) {
-          const hx = mx + (k - (SLOTS - 1) / 2) * hgap;
+        for (let k = 0; k < MOTOR_SLOTS; k++) {
+          const hx = mx + (k - (MOTOR_SLOTS - 1) / 2) * hgap;
           this.headers.push({ id: `${m.id}_${dir}${k}`, kind: 'motor-in',
                               targetId: m.id, dir, slot: k,
                               x: hx, y: m._bankY[dir], r: 6 });
@@ -109,9 +131,45 @@ export class EditorView {
     this.biasPot = { x: this.cx, y: this.rearY, r: 13 };
 
     // ── +/- neuron buttons, OUTSIDE the robot, left of its outer edge ──
-    const bw = 28, bh = 26, bx = d.x - bw - 8;
-    this.addBtn = { x: bx, y: this.rowY[0] - bh - 4, w: bw, h: bh };
-    this.subBtn = { x: bx, y: this.rowY[0] + 4,      w: bw, h: bh };
+    // Buttons live OUTSIDE the chassis, in the canvas corners. The ring can put
+    // a sensor anywhere on the deck perimeter, but a module is pushed out
+    // radially from the deck centre, so one mounted near a deck corner travels
+    // diagonally and leaves the canvas corner clear. Anywhere else in the
+    // margin, a sensor eventually lands on top of the buttons.
+    const bw = 28, bh = 26, bx = 8;
+    this.addSensorBtn = { x: bx, y: 22,      w: bw, h: bh };
+    this.subSensorBtn = { x: bx, y: 56,      w: bw, h: bh };
+    this.addBtn       = { x: bx, y: H - 100, w: bw, h: bh };
+    this.subBtn       = { x: bx, y: H - 66,  w: bw, h: bh };
+  }
+
+  /* Canvas geometry for a mount: the module sits proud of the hull at its slot,
+   * with its output pin just inboard of the outline. */
+  _mountGeom(mp) {
+    const p = this.v.slotPos(mp.slot);
+    const px = this.deckCx + p.x * this.bpx;
+    const py = this.deckCy - p.y * this.bpy;
+    let ox = px - this.deckCx, oy = py - this.deckCy;
+    const len = Math.hypot(ox, oy) || 1;
+    ox /= len; oy /= len;
+    return { x: px + ox * SENSOR_OUTSET, y: py + oy * SENSOR_OUTSET,
+             pin: { x: px - ox * 6, y: py - oy * 6 }, nx: ox, ny: oy };
+  }
+
+  /* Ring slot nearest a canvas point. */
+  _slotFromPoint(p) {
+    const bx =  (p.x - this.deckCx) / this.bpx;     // body +X (right)
+    const by = -(p.y - this.deckCy) / this.bpy;     // body +Y (forward)
+    const deg = Math.atan2(-bx, by) * 180 / Math.PI;   // CCW from forward
+    const step = 360 / RING_SLOTS;
+    return ((Math.round(deg / step) % RING_SLOTS) + RING_SLOTS) % RING_SLOTS;
+  }
+
+  /* Unit vector, in canvas space, of a body-frame facing in degrees CCW from
+   * forward. Forward is up (-y) and CCW swings to port (-x). */
+  _facingVec(deg) {
+    const th = deg * Math.PI / 180;
+    return { x: -Math.sin(th), y: -Math.cos(th) };
   }
 
   // ── drawing ──
@@ -129,6 +187,7 @@ export class EditorView {
       ctx.beginPath(); ctx.moveTo(this.dragFrom.x, this.dragFrom.y); ctx.lineTo(this.dragXY.x, this.dragXY.y);
       ctx.stroke(); ctx.setLineDash([]);
     }
+    this._drawSensors();
     this._drawHeaders();
     this._drawButtons();
   }
@@ -157,8 +216,10 @@ export class EditorView {
     }
     ctx.setLineDash([]);
     ctx.fillStyle = COL.dim; ctx.font = '11px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('▲ FRONT', this.cx, d.y - 14);
-    ctx.fillText('REAR ▼', this.cx, d.y + d.h + 22);
+    ctx.fillText('▲ FRONT', this.cx, d.y + 16);
+    ctx.textAlign = 'left';
+    ctx.fillText('REAR ▼', d.x + 12, d.y + d.h - 10);
+    ctx.textAlign = 'center';
   }
 
   _drawMeters() {
@@ -263,10 +324,43 @@ export class EditorView {
     }
   }
 
+  /* A sensor module: a body sitting proud of the hull, a tick showing which way
+   * it faces, and its id on the outboard side. The wiring pin is a header and
+   * is drawn by _drawHeaders. */
+  _drawSensors() {
+    const ctx = this.ctx;
+    for (const h of this.headers) {
+      if (h.kind !== 'sensor-body') continue;
+      const type = h.sensorType;
+      const tint = type === 'LDR' ? LDR_CH_COL[h.channel || 'W']
+                 : type === 'IR'  ? COL.prox : '#3a4250';
+      const active = (h === this.hoverHeader) || (this.moveDrag && this.moveDrag.id === h.mountId);
+
+      // facing tick
+      const v = this._facingVec(h.angle);
+      ctx.strokeStyle = tint; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(h.x + v.x * 21, h.y + v.y * 21); ctx.stroke();
+      ctx.beginPath(); ctx.arc(h.x + v.x * 21, h.y + v.y * 21, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = tint; ctx.fill();
+
+      // module body
+      ctx.fillStyle = '#1b2230';
+      ctx.strokeStyle = active ? COL.ink : tint; ctx.lineWidth = 2.5;
+      this._roundRect(h.x - 12, h.y - 10, 24, 20, 5); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = tint; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
+      ctx.fillText(type === 'LDR' ? (h.channel || 'W') : type === 'IR' ? 'IR' : '—', h.x, h.y + 3);
+
+      // id, outboard
+      ctx.fillStyle = active ? COL.ink : COL.dim; ctx.font = '9px monospace';
+      ctx.fillText(h.mountId, h.x + h.nx * 22, h.y + h.ny * 22 + 3);
+    }
+  }
+
   _drawHeaders() {
     const ctx = this.ctx;
     for (const h of this.headers) {
       let fill = COL.dim, ring = COL.deckLine;
+      if (h.kind === 'sensor-body') continue;          // drawn by _drawSensors
       if (h.kind === 'sensor-out') {
         if (h.sensorType === 'LDR') fill = LDR_CH_COL[h.channel || 'W'];
         else if (h.sensorType === 'IR') fill = COL.prox;
@@ -277,20 +371,10 @@ export class EditorView {
       else if (h.kind === 'neuron-out') fill = COL.ink;
       else if (h.kind === 'meter-in') fill = '#8b949e';
       if (h === this.hoverHeader) ring = COL.ink;
-      if (h.kind === 'sensor-out' && h.sensorType === 'IR') {
-        ctx.fillStyle = fill; ctx.strokeStyle = ring; ctx.lineWidth = 2;
-        this._roundRect(h.x - 8, h.y - 9, 16, 18, 3); ctx.fill(); ctx.stroke();
-      } else {
-        ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
-        ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.stroke();
-      }
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
+      ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = COL.dim; ctx.font = '10px monospace'; ctx.textAlign = 'center';
       if (h.kind === 'neuron-in') ctx.fillText(h.sign > 0 ? 'E' : 'I', h.x, h.y - 11);
-      if (h.kind === 'sensor-out') {
-        const label = (h.sensorType === 'LDR') ? `LDR·${h.channel || 'W'}`
-                    : (h.sensorType === 'IR') ? 'IR' : '—';
-        ctx.fillText(label, h.x, h.y - 15);
-      }
     }
   }
 
@@ -305,11 +389,19 @@ export class EditorView {
       ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
       ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 5);
     };
-    btn(this.addBtn, '+', n < 6);
+    btn(this.addBtn, '+', n < MAX_NEURONS);
     btn(this.subBtn, '−', n > 0);
+    const sn = this.v.mountPoints.length;
+    btn(this.addSensorBtn, '+', sn < MAX_SENSORS);
+    btn(this.subSensorBtn, '−', sn > 0);
     ctx.fillStyle = COL.dim; ctx.font = '9px monospace'; ctx.textAlign = 'center';
     ctx.fillText('neurons', this.addBtn.x + this.addBtn.w / 2, this.addBtn.y - 8);
-    ctx.fillText(n + '/6', this.subBtn.x + this.subBtn.w / 2, this.subBtn.y + this.subBtn.h + 14);
+    ctx.fillText(n + '/' + MAX_NEURONS, this.subBtn.x + this.subBtn.w / 2,
+                 this.subBtn.y + this.subBtn.h + 14);
+    ctx.fillText('sensors', this.addSensorBtn.x + this.addSensorBtn.w / 2,
+                 this.addSensorBtn.y - 8);
+    ctx.fillText(sn + '/' + MAX_SENSORS, this.subSensorBtn.x + this.subSensorBtn.w / 2,
+                 this.subSensorBtn.y + this.subSensorBtn.h + 14);
   }
 
   _roundRect(x, y, w, h, r) {
@@ -336,6 +428,16 @@ export class EditorView {
       const p = xy(e);
       if (inBox(p, this.addBtn)) { this.v.addNeuron(); this.layout(); this.draw(); this._changed(); return; }
       if (inBox(p, this.subBtn)) { this.v.removeLastNeuron(); this.layout(); this.draw(); this._changed(); return; }
+      // sensors: add lands in the free slot nearest the front; remove is LIFO,
+      // matching how neurons behave.
+      if (inBox(p, this.addSensorBtn)) {
+        this.v.addSensor('LDR'); this.layout(); this.draw(); this._changed(); return;
+      }
+      if (inBox(p, this.subSensorBtn)) {
+        const last = this.v.mountPoints[this.v.mountPoints.length - 1];
+        if (last) this.v.removeSensor(last.id);
+        this.layout(); this.draw(); this._changed(); return;
+      }
       // neuron bias trimpots
       for (const n of this.v.neurons) {
         if (Math.hypot(p.x - n._cx, p.y - (n._cy - n._r * 0.3)) < 11) {
@@ -348,6 +450,9 @@ export class EditorView {
         this.trimDrag = { kind: 'bias' }; this._ty0 = p.y; this._b0 = this.v.bias; return;
       }
       const h = this._hit(p);
+      if (h && h.kind === 'sensor-body') {
+        this.moveDrag = { id: h.mountId, moved: false }; this.draw(); return;
+      }
       if (h && (h.kind === 'sensor-out' || h.kind === 'neuron-out')) { this.dragFrom = h; this.dragXY = p; return; }
       // LEFT-CLICK a wire cycles its colour (weight): blue -> green -> red
       const w = this._hitWire(p);
@@ -362,6 +467,15 @@ export class EditorView {
         else this.v.setNeuronBias(this.trimDrag.id, val);
         this.draw(); return;
       }
+      if (this.moveDrag) {
+        const slot = this._slotFromPoint(p);
+        const mp = this.v.mountPoints.find(m => m.id === this.moveDrag.id);
+        // setSensorSlot refuses an occupied slot, so a crowded ring just holds.
+        if (mp && mp.slot !== slot && this.v.setSensorSlot(this.moveDrag.id, slot)) {
+          this.moveDrag.moved = true; this.layout(); this.draw();
+        }
+        return;
+      }
       if (this.dragFrom) { this.dragXY = p; this.hoverHeader = this._hit(p); this.draw(); return; }
       const h = this._hit(p);
       if (h !== this.hoverHeader) { this.hoverHeader = h; this.draw(); }
@@ -370,6 +484,11 @@ export class EditorView {
     c.addEventListener('mouseup', e => {
       const p = xy(e);
       if (this.trimDrag) { this.trimDrag = null; this._changed(); return; }
+      if (this.moveDrag) {
+        const md = this.moveDrag; this.moveDrag = null;
+        if (!md.moved && this.v.loadout[md.id] === 'LDR') this._cycleChannel(md.id);
+        this.layout(); this.draw(); this._changed(); return;
+      }
       if (this.dragFrom) {
         const dst = this._hit(p);
         if (dst && dst === this.dragFrom && dst.kind === 'sensor-out'
@@ -386,7 +505,7 @@ export class EditorView {
     c.addEventListener('dblclick', e => {
       const p = xy(e);
       const h = this._hit(p);
-      if (h && h.kind === 'sensor-out') {
+      if (h && (h.kind === 'sensor-out' || h.kind === 'sensor-body')) {
         const cur = this.v.loadout[h.mountId];
         const next = cur === 'LDR' ? 'IR' : cur === 'IR' ? 'none' : 'LDR';
         this.v.setMount(h.mountId, next);
@@ -401,10 +520,20 @@ export class EditorView {
       const w = this._hitWire(p);
       if (w) { this.v.disconnect(w.srcId, w.targetId); this.draw(); this._changed(); return; }
       const h = this._hit(p);
-      if (h && h.kind === 'sensor-out' && this.v.loadout[h.mountId] === 'LDR') {
+      if (h && (h.kind === 'sensor-out' || h.kind === 'sensor-body')
+            && this.v.loadout[h.mountId] === 'LDR') {
         this._cycleChannel(h.mountId); this.draw(); this._changed();
       }
     });
+
+    // WHEEL over a sensor rotates its facing one ANGLE_STEP.
+    c.addEventListener('wheel', e => {
+      const h = this._hit(xy(e));
+      if (!h || (h.kind !== 'sensor-body' && h.kind !== 'sensor-out')) return;
+      e.preventDefault();
+      this.v.rotateSensor(h.mountId, e.deltaY < 0 ? 1 : -1);
+      this.layout(); this.draw(); this._changed();
+    }, { passive: false });
   }
 
   _changed() { if (this.onChange) this.onChange(); }
