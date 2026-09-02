@@ -1,9 +1,9 @@
 /* app.js — two-screen BYOV: Build (robot+wiring) and Arena&run.
  */
-import { Vehicle } from './vehicle.js?v=13';
-import { Arena, Renderer } from './arena.js?v=13';
-import { EditorView } from './editor_view.js?v=13';
-import { driveStep } from './sim.js?v=13';
+import { Vehicle } from './vehicle.js?v=14';
+import { Arena, Renderer } from './arena.js?v=14';
+import { EditorView } from './editor_view.js?v=14';
+import { driveStep } from './sim.js?v=14';
 
 const arena = new Arena();
 const vehicle = new Vehicle();
@@ -50,37 +50,72 @@ tabBuild.addEventListener('click', showBuild);
 tabRun.addEventListener('click', showRun);
 
 // ── Presets ──
-// All five wire sensors STRAIGHT to motors — no neurons needed. Motors have a
-// FORWARD and a REVERSE bank (like the board's FL/BL, FR/BR); there is no
-// excite/inhibit at a motor, you choose the direction. Wire colour is weight
-// (blue 1x, green 2x, red 3x). 3a/3b lean on the shared pot for a resting
-// forward speed that the light then works against.
+// A preset is DATA about one vehicle -- how many neurons it needs, what the
+// pot is set to, and how it is wired -- not a sequence of clicks. The RESET
+// deliberately lives in applyPreset(), not in the definitions, so the planned
+// "add this vehicle to what I already have" mode is a flag on the applier
+// rather than a rewrite of all five.
+//
+// 1, 2a and 2b wire sensors STRAIGHT to motors. Motors have a FORWARD and a
+// REVERSE bank (like the board's FL/BL, FR/BR); there is no excite/inhibit at
+// a motor, you choose the direction.
+//
+// 3a and 3b are the ones with a SIGN on the connection, and that sign is an
+// INHIBITORY NEURON between the sensor and its motor -- not a wire into the
+// reverse bank. The difference shows up under a strong stimulus: a neuron
+// clamps to [0, 1], so the motor slows to a stop, whereas a reverse wire keeps
+// subtracting past zero and drives the motor backwards.
 const PRESETS = {
-  'Vehicle 1 (alive)': v => { clearWiring(v);
-    v.connect('LDR_L', 'L', 'fwd', 'blue'); v.connect('LDR_L', 'R', 'fwd', 'blue'); },
+  'Vehicle 1 (alive)': { neurons: 0, bias: 0, wire: v => {
+    v.connect('LDR_L', 'L', 'fwd', 'blue'); v.connect('LDR_L', 'R', 'fwd', 'blue'); } },
 
-  'Vehicle 2a (coward)': v => { clearWiring(v); v.setBias(.15);
-    v.connect('LDR_L', 'L', 'fwd', 'blue'); v.connect('LDR_R', 'R', 'fwd', 'blue'); },
+  'Vehicle 2a (coward)': { neurons: 0, bias: .15, wire: v => {
+    v.connect('LDR_L', 'L', 'fwd', 'blue'); v.connect('LDR_R', 'R', 'fwd', 'blue'); } },
 
-  'Vehicle 2b (aggressor)': v => { clearWiring(v); v.setBias(.15);
-    v.connect('LDR_R', 'L', 'fwd', 'blue'); v.connect('LDR_L', 'R', 'fwd', 'blue'); },
+  'Vehicle 2b (aggressor)': { neurons: 0, bias: .15, wire: v => {
+    v.connect('LDR_R', 'L', 'fwd', 'blue'); v.connect('LDR_L', 'R', 'fwd', 'blue'); } },
 
-  'Vehicle 3a (love)': v => { clearWiring(v); v.setBias(.6);
-    v.connect('LDR_L', 'L', 'rev', 'blue'); v.connect('LDR_R', 'R', 'rev', 'blue'); },
+  // SAME-SIDE inhibition: light to port slows the PORT motor, so the vehicle
+  // turns toward the light and comes to rest facing it.
+  'Vehicle 3a (love)': { neurons: 2, bias: 0, neuronBias: .6, wire: (v, N) => {
+    v.connect('LDR_L', N[0], -1, 'blue'); v.connect(N[0], 'L', 'fwd', 'blue');
+    v.connect('LDR_R', N[1], -1, 'blue'); v.connect(N[1], 'R', 'fwd', 'blue'); } },
 
-  'Vehicle 3b (explorer)': v => { clearWiring(v); v.setBias(.6);
-    v.connect('LDR_R', 'L', 'rev', 'blue'); v.connect('LDR_L', 'R', 'rev', 'blue'); },
+  // CROSSED inhibition: light to port slows the STARBOARD motor, so the
+  // vehicle turns away and moves on.
+  'Vehicle 3b (explorer)': { neurons: 2, bias: 0, neuronBias: .6, wire: (v, N) => {
+    v.connect('LDR_L', N[0], -1, 'blue'); v.connect(N[0], 'R', 'fwd', 'blue');
+    v.connect('LDR_R', N[1], -1, 'blue'); v.connect(N[1], 'L', 'fwd', 'blue'); } },
 };
-function clearWiring(v) {
-  // Restore the stock four mounts: a preset describes a specific vehicle, so it
-  // needs that vehicle's sensors back at their stock slots and angles. Sensors
-  // the student added, moved or removed do NOT survive a preset.
-  v.resetMounts();
-  // Sever the wiring, but KEEP any neurons the player has added, along with
-  // their biases (and their meter hook-ups). Presets define the direct
-  // sensor->motor circuit; the neurons stay on the board to be re-used.
-  v.clearWiring();
+
+/* Neuron ids for a preset to use. Replace mode starts from the board's
+ * existing neurons (their inputs are already severed) and adds any shortfall;
+ * additive mode would append fresh ones instead. Returns fewer ids than asked
+ * for only if MAX_NEURONS is in the way. */
+function ensureNeurons(v, count, keepExisting) {
+  const from = keepExisting ? v.neurons.length : 0;
+  while (v.neurons.length < from + count) if (!v.addNeuron()) break;
+  return v.neurons.slice(from, from + count).map(n => n.id);
 }
+
+/* Apply a preset. A preset is a fully canned vehicle: by default it REPLACES
+ * the board -- stock sensors back at their stock slots, all wiring severed,
+ * the pot reset -- because it describes one specific machine, not an addition
+ * to yours.
+ *
+ * keepExisting is the seam for the planned compose mode (pick one or more
+ * presets, tick "keep current work", hit generate). Nothing calls it with true
+ * yet; it is here so that feature does not have to reopen the definitions. */
+function applyPreset(name, v, { keepExisting = false } = {}) {
+  const p = PRESETS[name];
+  if (!p) return;
+  if (!keepExisting) { v.resetMounts(); v.clearWiring(); }
+  const N = ensureNeurons(v, p.neurons, keepExisting);
+  for (const id of N) v.setNeuronBias(id, p.neuronBias ?? 0);
+  v.setBias(p.bias ?? 0);
+  p.wire(v, N);
+}
+
 // ── Preset gating ──
 // Presets start LOCKED: a preset is the answer to an exercise, so it stays out
 // of reach until the student says they have built that vehicle themselves.
@@ -113,7 +148,7 @@ function buildPresets() {
     b.title = unlocked ? 'Load this wiring'
                        : 'Locked — build this vehicle yourself, then tick to unlock';
     b.addEventListener('click', () => {
-      PRESETS[name](vehicle); editor.layout(); editor.draw();
+      applyPreset(name, vehicle); editor.layout(); editor.draw();
     });
 
     const mark = document.createElement('button');

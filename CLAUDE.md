@@ -48,7 +48,7 @@ didn't ship". Bump all 9 together:
 
 ```
 grep -rn "?v=" index.html *.js            # see the current state
-sed -i 's/?v=11/?v=13/g' index.html *.js    # bump them all
+sed -i 's/?v=11/?v=14/g' index.html *.js    # bump them all
 ```
 
 A mismatch is worse than a stale copy: `app.js` and `editor_view.js` both
@@ -189,14 +189,31 @@ that is its own change with its own testing.
   claim holds, and a student who builds something equivalent-but-different is
   never told they are wrong. The app also boots **unwired**: it used to apply
   `Vehicle 2b`, which would hand out a locked preset's answer.
-- Presets rewire sensor → motor directly. **Presets must not delete neurons** —
-  they sever wires but leave neurons, their biases, and meter wiring intact.
-  Two things a preset DOES reset, via `clearWiring()` in `app.js:74`:
-  - **the shared pot.** Four of the five presets then set it deliberately;
-    `Vehicle 1 (alive)` sets no bias and relies on the reset to 0.
-  - **the whole sensor set**, via `Vehicle.resetMounts()` — the stock four ids,
-    slots, angles, types and channels. A preset describes one specific vehicle,
-    so sensors the student added, moved, retyped or removed do NOT survive it.
+- **A preset is a fully canned vehicle, and applying one REPLACES the board.**
+  `applyPreset()` in `app.js` resets the sensor set (`Vehicle.resetMounts()` —
+  stock four ids, slots, angles, types, channels), severs all wiring, and sets
+  the pot. Anything the student built is gone. That is deliberate: a preset
+  describes one specific machine, not an addition to yours.
+- **A preset is DATA, not a sequence of clicks**: `{ neurons, bias, neuronBias,
+  wire }`. The reset lives in `applyPreset()`, NOT in the definitions, and
+  `applyPreset` takes a `keepExisting` flag that nothing passes yet. That is
+  the seam for the planned compose mode (see Planned below) — keep it that way,
+  because moving the reset back into the definitions closes that door.
+- **Presets 1, 2a and 2b wire sensors straight to motors. 3a and 3b do not.**
+  Their sign is an INHIBITORY NEURON between each sensor and its motor, which
+  is what a signed connection means — NOT a wire into the reverse bank. The
+  two differ under a strong stimulus: a neuron clamps to `[0, 1]` so the motor
+  slows to a stop, where a reverse wire keeps subtracting past zero and drives
+  the motor backwards. 3a is same-side (turns toward the light, comes to rest
+  facing it); 3b is crossed (turns away). Both use `neuronBias: .6`, which
+  reproduces the cruising speed the old reverse-wire version had.
+  Consequence worth knowing: under a perfectly symmetric strong light both
+  vehicles stop rather than reverse.
+- **Presets write to neurons, but never delete them.** 3a and 3b need two, so
+  `ensureNeurons()` reuses the board's existing neurons (their inputs are
+  already severed by then) and adds any shortfall, then sets their biases. A
+  student's third and later neurons survive untouched; the first two have their
+  biases overwritten.
 - **Sensors are added, removed, moved and aimed by the student.** Max 8, on a
   24-slot ring around the hull. `+`/`−` inside the deck add and remove (remove
   is LIFO, like neurons); drag a sensor **module** to slide it round the ring;
@@ -207,6 +224,21 @@ that is its own change with its own testing.
   right-click it. Order is `W → R → G → B → W`, starting from the default `W`
   (so the first click gives you R). Right-click is overloaded — on a wire it
   removes the wire, on an LDR header it cycles the channel.
+
+---
+
+## Planned — not built yet
+
+- **Composing presets.** Today a preset replaces everything, so a student who
+  builds 2a and then wants to add 3a loses 2a. The intended fix is to select
+  one or more presets and hit a *generate* button, with a toggle for whether to
+  keep current work. The groundwork is in place: preset definitions are data,
+  the reset lives in `applyPreset()`, and `applyPreset(name, v, { keepExisting:
+  true })` already skips the reset and appends fresh neurons rather than reusing
+  existing ones. What is missing is the UI (multi-select, the toggle, the
+  button) and a decision about what "combining" two vehicles means when both
+  want to drive the same motor bank — the banks hold `MOTOR_SLOTS` wires each,
+  so two presets can coexist there, but the result is a sum, not a layering.
 
 ---
 
