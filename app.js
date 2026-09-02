@@ -1,9 +1,9 @@
 /* app.js — two-screen BYOV: Build (robot+wiring) and Arena&run.
  */
-import { Vehicle } from './vehicle.js?v=12';
-import { Arena, Renderer } from './arena.js?v=12';
-import { EditorView } from './editor_view.js?v=12';
-import { driveStep } from './sim.js?v=12';
+import { Vehicle } from './vehicle.js?v=13';
+import { Arena, Renderer } from './arena.js?v=13';
+import { EditorView } from './editor_view.js?v=13';
+import { driveStep } from './sim.js?v=13';
 
 const arena = new Arena();
 const vehicle = new Vehicle();

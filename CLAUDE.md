@@ -48,7 +48,7 @@ didn't ship". Bump all 9 together:
 
 ```
 grep -rn "?v=" index.html *.js            # see the current state
-sed -i 's/?v=11/?v=12/g' index.html *.js    # bump them all
+sed -i 's/?v=11/?v=13/g' index.html *.js    # bump them all
 ```
 
 A mismatch is worse than a stale copy: `app.js` and `editor_view.js` both
@@ -163,8 +163,12 @@ that is its own change with its own testing.
 
 ## Conventions
 
-- **Wire colour is weight**, not sign: blue 1×, green 2×, red 3×. Left-click a
-  wire cycles it, right-click removes.
+- **Wire colour is R**, not sign: blue 1×, green 2×, red 3×. Left-click a wire
+  cycles it, right-click removes. On the physical robot the colours are
+  literally different resistors spliced into the wire, so **user-facing text
+  says "R", never "weight"** — weight is neuron jargon and using it for wires
+  misleads students about what the hardware does. The internal constant is
+  still `WIRE_WEIGHT` in `vehicle.js`; that name is code, not UI copy.
 - **Motors have FWD and REV banks** of 4 sockets each. There is no
   excite/inhibit on motors; direction is which bank the wire lands in.
   `motor = clamp(sharedBias + Σfwd − Σrev, −1, 1)`.

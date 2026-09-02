@@ -22,7 +22,7 @@
  *     sensors/neurons -> meters   M = clamp(weight*source, 0, 1)      [display]
  *     sensors/neurons -> motors   V = clamp(sharedBias + Σfwd - Σrev, -1, 1)
  */
-import { sensorPose, readLDR, readIR, clamp } from './sim.js?v=12';
+import { sensorPose, readLDR, readIR, clamp } from './sim.js?v=13';
 
 export const WIRE_WEIGHT = { blue: 1, green: 2, red: 3 };
 export const WIRE_COLORS = ['blue', 'green', 'red'];
