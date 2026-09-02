@@ -17,7 +17,7 @@
   --ink:       #ccdcff;   /* TEXT */
   --ink-dim:   #505a8c;   /* TEXT_DIM */
   --light:     #ffdc3c;   /* LDR / light stimulus (LIGHT_COLOR) */
-  --prox:      #44ccff;   /* IR / proximity (PHOSPHOR) */
+  --prox:      #ff9ecf;   /* IR / proximity — pink, as in the main project */
   --motor:     #2878ff;   /* drive / motors (BLUE_PH) */
   --excite:    #00ffa0;   /* E header (BEH_SEEK) */
   --inhibit:   #ff2828;   /* I header (RED_PH) */

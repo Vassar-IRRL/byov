@@ -28,19 +28,19 @@ cached copy.** This is the single most common way a change appears not to have
 shipped.
 
 The version tags are NOT all in `index.html` — seven of the nine live in JS
-`import` statements. All 9 sites, currently all at `?v=10`:
+`import` statements. All 9 sites, currently all at `?v=11`:
 
 | file | line | specifier |
 |---|---|---|
-| `index.html` | 7 | `style.css?v=10` |
-| `index.html` | 99 | `app.js?v=10` |
-| `app.js` | 3 | `./vehicle.js?v=10` |
-| `app.js` | 4 | `./arena.js?v=10` |
-| `app.js` | 5 | `./editor_view.js?v=10` |
-| `app.js` | 6 | `./sim.js?v=10` |
-| `arena.js` | 5 | `./sim.js?v=10` |
-| `editor_view.js` | 24 | `./vehicle.js?v=10` |
-| `vehicle.js` | 25 | `./sim.js?v=10` |
+| `index.html` | 7 | `style.css?v=11` |
+| `index.html` | 99 | `app.js?v=11` |
+| `app.js` | 3 | `./vehicle.js?v=11` |
+| `app.js` | 4 | `./arena.js?v=11` |
+| `app.js` | 5 | `./editor_view.js?v=11` |
+| `app.js` | 6 | `./sim.js?v=11` |
+| `arena.js` | 5 | `./sim.js?v=11` |
+| `editor_view.js` | 24 | `./vehicle.js?v=11` |
+| `vehicle.js` | 25 | `./sim.js?v=11` |
 
 Bumping only `index.html` busts `style.css` and `app.js` and nothing else — a
 changed `sim.js` is still served from cache, which looks exactly like "my edit
@@ -48,7 +48,7 @@ didn't ship". Bump all 9 together:
 
 ```
 grep -rn "?v=" index.html *.js            # see the current state
-sed -i 's/?v=10/?v=11/g' index.html *.js    # bump them all
+sed -i 's/?v=11/?v=12/g' index.html *.js    # bump them all
 ```
 
 A mismatch is worse than a stale copy: `app.js` and `editor_view.js` both

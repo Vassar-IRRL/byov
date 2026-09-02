@@ -21,12 +21,12 @@
  * a module rotates its facing one step.
  */
 
-import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=10';
+import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=11';
 
 // 16-BIT palette, ported from engine/theme.py ("sixteenbit") in the
 // PAW-Robotics suite. Mirrors the CSS variables in style.css — change both.
 const COL = {
-  prox: '#44ccff', motor: '#2878ff',
+  prox: '#ff9ecf', motor: '#2878ff',
   excite: '#00ffa0', inhibit: '#ff2828',
   deck: '#000828', deckLine: '#4444cc',
   ink: '#ccdcff', dim: '#505a8c', tyre: '#000418', tyreLine: '#1c1c58',

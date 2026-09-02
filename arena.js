@@ -2,7 +2,7 @@
  * canvas rendering (arena, vehicle body, directional sensor cones, trail).
  * Mirrors the physical PAW arena proportions (1.2 m × 1.6 m).
  */
-import { PHYS, LDR, sensorPose } from './sim.js?v=10';
+import { PHYS, LDR, sensorPose } from './sim.js?v=11';
 
 export class Arena {
   constructor(width = 1.2, height = 1.6) {
@@ -209,7 +209,7 @@ export class Renderer {
         ctx.arc(cx, cy, len, a - half, a + half);
         ctx.closePath();
         ctx.fillStyle = (s.type === 'LDR') ? 'rgba(255,220,60,0.10)'
-                                           : 'rgba(68,204,255,0.10)';
+                                           : 'rgba(255,158,207,0.10)';
         ctx.fill();
       }
     }
@@ -239,7 +239,7 @@ export class Renderer {
     // sensor dots
     for (const s of v.sensors) {
       const pose = sensorPose(v, s.mount);
-      ctx.fillStyle = (s.type === 'LDR') ? '#ffdc3c' : '#44ccff';
+      ctx.fillStyle = (s.type === 'LDR') ? '#ffdc3c' : '#ff9ecf';
       ctx.beginPath(); ctx.arc(this.tx(pose.x), this.ty(pose.y), 3, 0, Math.PI * 2); ctx.fill();
     }
   }
