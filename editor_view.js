@@ -21,20 +21,23 @@
  * a module rotates its facing one step.
  */
 
-import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=9';
+import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=10';
 
+// 16-BIT palette, ported from engine/theme.py ("sixteenbit") in the
+// PAW-Robotics suite. Mirrors the CSS variables in style.css — change both.
 const COL = {
-  prox: '#ff69b4', motor: '#58a6ff',
-  excite: '#3fb950', inhibit: '#f85149',
-  deck: '#12161d', deckLine: '#3a4250',
-  ink: '#e6edf3', dim: '#8b949e', tyre: '#0c0e12', tyreLine: '#2b3038',
-  label: '#ffdd57',        // --light: the phosphor accent, for deck captions
+  prox: '#44ccff', motor: '#2878ff',
+  excite: '#00ffa0', inhibit: '#ff2828',
+  deck: '#000828', deckLine: '#4444cc',
+  ink: '#ccdcff', dim: '#505a8c', tyre: '#000418', tyreLine: '#1c1c58',
+  sunk: '#000418',         // PANEL_DEEP — modules, neurons, motors on the deck
+  label: '#ffcc00',        // AMBER — deck captions and the add/remove pairs
 };
-const LDR_CH_COL = { W: '#ffc83c', R: '#dc3c3c', G: '#3cc83c', B: '#508cff' };
+const LDR_CH_COL = { W: '#ffdc3c', R: '#ff2828', G: '#00ffa0', B: '#2878ff' };
 // Wire weight colours — blue 1x, green 2x, red 3x (engine/signals.py).
 // Presentation only: the hex for each weight colour. The SET of colours is
 // owned by WIRE_COLORS in vehicle.js — add one there and it needs a hex here.
-const WIRE_COL = { blue: '#4d8cff', green: '#3fb950', red: '#f85149' };
+const WIRE_COL = { blue: '#2878ff', green: '#00ffa0', red: '#ff2828' };
 const SENSOR_OUTSET = 24;   // px the module sits proud of the hull outline
 
 export class EditorView {
@@ -202,7 +205,7 @@ export class EditorView {
       ctx.fillStyle = COL.tyre; ctx.strokeStyle = COL.tyreLine; ctx.lineWidth = 2;
       this._roundRect(wx, wy - wheelH / 2, wheelW, wheelH, 12);
       ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#3a4250';
+      ctx.fillStyle = '#1c1c58';
       ctx.beginPath(); ctx.arc(wx + wheelW / 2, wy, 5, 0, Math.PI * 2); ctx.fill();
     }
   }
@@ -211,7 +214,7 @@ export class EditorView {
     const ctx = this.ctx, d = this.deck;
     ctx.fillStyle = COL.deck; ctx.strokeStyle = COL.deckLine; ctx.lineWidth = 2.5;
     this._roundRect(d.x, d.y, d.w, d.h, 14); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = '#222a34'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
+    ctx.strokeStyle = '#1c1c58'; ctx.lineWidth = 1; ctx.setLineDash([4, 5]);
     for (const y of [this.frontY, this.rearY]) {
       ctx.beginPath(); ctx.moveTo(d.x + 10, y); ctx.lineTo(d.x + d.w - 10, y); ctx.stroke();
     }
@@ -228,11 +231,11 @@ export class EditorView {
     for (const mt of this.v.meters) {
       const val = (this.v._meterVals && this.v._meterVals[mt.id]) || 0;
       const x = mt._cx - mt._w / 2, y = mt._cy - mt._h / 2;
-      ctx.fillStyle = '#0d1117'; ctx.strokeStyle = COL.deckLine; ctx.lineWidth = 2;
+      ctx.fillStyle = COL.sunk; ctx.strokeStyle = COL.deckLine; ctx.lineWidth = 2;
       this._roundRect(x, y, mt._w, mt._h, 4); ctx.fill(); ctx.stroke();
       // fill bar showing the metered value
       if (val > 0) {
-        ctx.fillStyle = '#2f6f4f';
+        ctx.fillStyle = '#00ffa0';
         this._roundRect(x + 3, y + mt._h - 9, (mt._w - 6) * val, 5, 2); ctx.fill();
       }
       ctx.fillStyle = COL.ink; ctx.font = '10px monospace'; ctx.textAlign = 'center';
@@ -247,11 +250,11 @@ export class EditorView {
       ctx.beginPath();
       ctx.moveTo(cx - r, cy - r); ctx.lineTo(cx + r, cy - r); ctx.lineTo(cx, cy + r);
       ctx.closePath();
-      ctx.fillStyle = '#1b2230'; ctx.strokeStyle = COL.deckLine; ctx.lineWidth = 2;
+      ctx.fillStyle = COL.sunk; ctx.strokeStyle = COL.deckLine; ctx.lineWidth = 2;
       ctx.fill(); ctx.stroke();
       const tx = cx, ty = cy - r * 0.3;
       ctx.beginPath(); ctx.arc(tx, ty, 9, 0, Math.PI * 2);
-      ctx.fillStyle = '#0d1117'; ctx.strokeStyle = COL.motor; ctx.lineWidth = 1.5; ctx.fill(); ctx.stroke();
+      ctx.fillStyle = COL.sunk; ctx.strokeStyle = COL.motor; ctx.lineWidth = 1.5; ctx.fill(); ctx.stroke();
       const ang = (-Math.PI / 2) + n.bias * (Math.PI * 0.8);
       ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + Math.cos(ang) * 7, ty + Math.sin(ang) * 7);
       ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.stroke();
@@ -264,20 +267,20 @@ export class EditorView {
     const ctx = this.ctx;
     for (const m of this.v.motors) {
       ctx.beginPath(); ctx.arc(m._cx, m._cy, m._r, 0, Math.PI * 2);
-      ctx.fillStyle = '#16202e'; ctx.strokeStyle = COL.motor; ctx.lineWidth = 2.5;
+      ctx.fillStyle = COL.sunk; ctx.strokeStyle = COL.motor; ctx.lineWidth = 2.5;
       ctx.fill(); ctx.stroke();
       ctx.fillStyle = COL.dim; ctx.font = '10px monospace'; ctx.textAlign = 'center';
       ctx.fillText(m.id === 'L' ? 'L motor' : 'R motor', m._cx, m._cy + 27);
       // bank labels
       ctx.font = '9px monospace'; ctx.textAlign = 'right';
-      ctx.fillStyle = '#7fb069'; ctx.fillText('FWD', m._cx - 34, m._bankY.fwd + 3);
-      ctx.fillStyle = '#c98b5e'; ctx.fillText('REV', m._cx - 34, m._bankY.rev + 3);
+      ctx.fillStyle = COL.excite; ctx.fillText('FWD', m._cx - 34, m._bankY.fwd + 3);
+      ctx.fillStyle = COL.label; ctx.fillText('REV', m._cx - 34, m._bankY.rev + 3);
       ctx.textAlign = 'center';
     }
     // the ONE shared bias pot, between the motors
     const b = this.biasPot;
     ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fillStyle = '#0d1117'; ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = COL.sunk; ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
     const ang = (-Math.PI / 2) + this.v.bias * (Math.PI * 0.8);
     ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.x + Math.cos(ang) * 10, b.y + Math.sin(ang) * 10);
     ctx.strokeStyle = COL.ink; ctx.lineWidth = 2; ctx.stroke();
@@ -334,7 +337,7 @@ export class EditorView {
       if (h.kind !== 'sensor-body') continue;
       const type = h.sensorType;
       const tint = type === 'LDR' ? LDR_CH_COL[h.channel || 'W']
-                 : type === 'IR'  ? COL.prox : '#3a4250';
+                 : type === 'IR'  ? COL.prox : '#1c1c58';
       const active = (h === this.hoverHeader) || (this.moveDrag && this.moveDrag.id === h.mountId);
 
       // facing tick
@@ -345,7 +348,7 @@ export class EditorView {
       ctx.fillStyle = tint; ctx.fill();
 
       // module body
-      ctx.fillStyle = '#1b2230';
+      ctx.fillStyle = COL.sunk;
       ctx.strokeStyle = active ? COL.ink : tint; ctx.lineWidth = 2.5;
       this._roundRect(h.x - 12, h.y - 10, 24, 20, 5); ctx.fill(); ctx.stroke();
       ctx.fillStyle = tint; ctx.font = 'bold 9px monospace'; ctx.textAlign = 'center';
@@ -365,12 +368,12 @@ export class EditorView {
       if (h.kind === 'sensor-out') {
         if (h.sensorType === 'LDR') fill = LDR_CH_COL[h.channel || 'W'];
         else if (h.sensorType === 'IR') fill = COL.prox;
-        else fill = '#3a4250';
+        else fill = '#1c1c58';
       }
       else if (h.kind === 'neuron-in') fill = h.sign > 0 ? COL.excite : COL.inhibit;
-      else if (h.kind === 'motor-in') fill = '#8b949e';
+      else if (h.kind === 'motor-in') fill = '#288cc8';
       else if (h.kind === 'neuron-out') fill = COL.ink;
-      else if (h.kind === 'meter-in') fill = '#8b949e';
+      else if (h.kind === 'meter-in') fill = '#288cc8';
       if (h === this.hoverHeader) ring = COL.ink;
       ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
       ctx.fillStyle = fill; ctx.fill(); ctx.strokeStyle = ring; ctx.lineWidth = 2; ctx.stroke();
@@ -383,10 +386,10 @@ export class EditorView {
     const ctx = this.ctx;
     const n = this.v.neurons.length;
     const btn = (b, label, enabled) => {
-      ctx.fillStyle = enabled ? '#1b2230' : '#151a21';
+      ctx.fillStyle = enabled ? COL.sunk : COL.sunk;
       ctx.strokeStyle = enabled ? COL.label : COL.deckLine; ctx.lineWidth = 1.5;
       this._roundRect(b.x, b.y, b.w, b.h, 6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = enabled ? COL.label : '#4a515c';
+      ctx.fillStyle = enabled ? COL.label : '#1c1c58';
       ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center';
       ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 5);
     };

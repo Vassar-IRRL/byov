@@ -28,19 +28,19 @@ cached copy.** This is the single most common way a change appears not to have
 shipped.
 
 The version tags are NOT all in `index.html` — seven of the nine live in JS
-`import` statements. All 9 sites, currently all at `?v=9`:
+`import` statements. All 9 sites, currently all at `?v=10`:
 
 | file | line | specifier |
 |---|---|---|
-| `index.html` | 7 | `style.css?v=9` |
-| `index.html` | 99 | `app.js?v=9` |
-| `app.js` | 3 | `./vehicle.js?v=9` |
-| `app.js` | 4 | `./arena.js?v=9` |
-| `app.js` | 5 | `./editor_view.js?v=9` |
-| `app.js` | 6 | `./sim.js?v=9` |
-| `arena.js` | 5 | `./sim.js?v=9` |
-| `editor_view.js` | 24 | `./vehicle.js?v=9` |
-| `vehicle.js` | 25 | `./sim.js?v=9` |
+| `index.html` | 7 | `style.css?v=10` |
+| `index.html` | 99 | `app.js?v=10` |
+| `app.js` | 3 | `./vehicle.js?v=10` |
+| `app.js` | 4 | `./arena.js?v=10` |
+| `app.js` | 5 | `./editor_view.js?v=10` |
+| `app.js` | 6 | `./sim.js?v=10` |
+| `arena.js` | 5 | `./sim.js?v=10` |
+| `editor_view.js` | 24 | `./vehicle.js?v=10` |
+| `vehicle.js` | 25 | `./sim.js?v=10` |
 
 Bumping only `index.html` busts `style.css` and `app.js` and nothing else — a
 changed `sim.js` is still served from cache, which looks exactly like "my edit
@@ -48,7 +48,7 @@ didn't ship". Bump all 9 together:
 
 ```
 grep -rn "?v=" index.html *.js            # see the current state
-sed -i 's/?v=9/?v=10/g' index.html *.js    # bump them all
+sed -i 's/?v=10/?v=11/g' index.html *.js    # bump them all
 ```
 
 A mismatch is worse than a stale copy: `app.js` and `editor_view.js` both
@@ -214,6 +214,14 @@ hold one fact, and nothing tells you when they stop agreeing.
   `BODY_R = 0.045` (the circle used for wall collision). They agree by hand,
   not by construction. Change one alone and the robot visibly clips through
   walls, or stops short of them, with both files looking correct in isolation.
+- **The 16-BIT palette is written down in three places.** `style.css` `:root`
+  holds it for the DOM, `COL` in `editor_view.js` for the robot canvas, and the
+  literals in `arena.js` for the arena canvas. It is ported from
+  `engine/theme.py` (`"sixteenbit"`) in the PAW-Robotics suite, which is a
+  fourth copy that nothing syncs. Retheming means editing all three here.
+  Within that, one pairing is exact: the `.sw-*` swatches in `style.css` are a
+  preview of `LIGHT_RGB` in `arena.js`, so if they drift the picker shows a
+  colour the arena will not draw.
 - **`WIRE_COL` in `editor_view.js` still restates the wire colour set.** It
   holds the hex for each weight colour, which is presentation and belongs to
   the view, but the SET of colours is owned by `WIRE_COLORS` in `vehicle.js`.

@@ -1,20 +1,29 @@
-/* BYOV — a lab-instrument aesthetic: dark workbench, phosphor-yellow light
- * accent (the LDR stimulus), signal-red for proximity (the IR), monospace data
- * faces against a clean sans for prose. Grounded in the robot's own world.
+/* BYOV — the 16-BIT theme, ported from the PAW-Robotics suite's
+ * engine/theme.py. Deep navy ground, indigo borders, cyan for proximity (the
+ * IR), warm yellow for light (the LDR stimulus), amber for the deck captions.
+ * Monospace faces on chrome, a sans kept for multi-line prose so the
+ * instructions stay readable.
  */
 :root {
-  --bg:        #0a0c10;
-  --panel:     #11151c;
-  --panel-2:   #161b22;
-  --line:      #232a33;
-  --ink:       #e6edf3;
-  --ink-dim:   #8b949e;
-  --light:     #ffdd57;   /* LDR / light stimulus */
-  --prox:      #ff6b6b;   /* IR / proximity */
-  --motor:     #58a6ff;   /* drive / motors */
-  --excite:    #3fb950;   /* E header */
-  --inhibit:   #f85149;   /* I header */
-  --mono: 'SFMono-Regular', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  /* 16-BIT — ported from the PAW-Robotics suite's engine/theme.py
+   * ("sixteenbit"). Kept as CSS variables so a future theme is a swap here
+   * plus the COL tables in editor_view.js / arena.js. */
+  --bg:        #000010;   /* BG */
+  --panel:     #000828;   /* PANEL */
+  --panel-2:   #001040;
+  --panel-deep:#000418;   /* PANEL_DEEP */
+  --line:      #1c1c58;   /* BORDER_DIM */
+  --line-lit:  #4444cc;   /* BORDER */
+  --ink:       #ccdcff;   /* TEXT */
+  --ink-dim:   #505a8c;   /* TEXT_DIM */
+  --light:     #ffdc3c;   /* LDR / light stimulus (LIGHT_COLOR) */
+  --prox:      #44ccff;   /* IR / proximity (PHOSPHOR) */
+  --motor:     #2878ff;   /* drive / motors (BLUE_PH) */
+  --excite:    #00ffa0;   /* E header (BEH_SEEK) */
+  --inhibit:   #ff2828;   /* I header (RED_PH) */
+  --amber:     #ffcc00;   /* AMBER — deck captions, add/remove */
+  --radius:    4px;       /* BTN_RADIUS */
+  --mono: 'Courier New', 'Cascadia Mono', ui-monospace, Consolas, monospace;
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
@@ -57,7 +66,7 @@ ul.hints {
   margin: 0 0 2px; padding-left: 16px; list-style: disc;
 }
 ul.hints li { margin: 0 0 2px; padding-left: 2px; }
-ul.hints li::marker { color: #58a6ff; }
+ul.hints li::marker { color: var(--prox); }
 .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-dim); }
 
 button {
@@ -69,7 +78,7 @@ button {
 button:hover:not(:disabled) { border-color: var(--motor); }
 button:disabled { opacity: .45; cursor: default; }
 button.primary {
-  background: var(--motor); color: #06101f; border-color: var(--motor); font-weight: 650;
+  background: var(--motor); color: #000010; border-color: var(--motor); font-weight: 650;
 }
 button.primary:hover { filter: brightness(1.08); }
 button.running { background: var(--inhibit); border-color: var(--inhibit); color: #fff; }
@@ -112,7 +121,7 @@ button.running { background: var(--inhibit); border-color: var(--inhibit); color
   border: 0; border-radius: 0; padding: 4px 10px; font-size: 12px;
   background: transparent; color: var(--ink-dim); font-family: var(--mono);
 }
-.seg button.on-E { background: var(--excite); color: #04140a; }
+.seg button.on-E { background: var(--excite); color: #000010; }
 .seg button.on-I { background: var(--inhibit); color: #fff; }
 .seg button.on-off { background: var(--line); color: var(--ink); }
 
@@ -126,7 +135,7 @@ footer { padding: 16px 28px; border-top: 1px solid var(--line);
 header { display: flex; align-items: center; justify-content: space-between; }
 .mode-toggle { display: flex; gap: 4px; background: var(--panel-2); padding: 4px; border-radius: 9px; border: 1px solid var(--line); }
 .mode-toggle button { background: transparent; border: 0; padding: 8px 16px; border-radius: 6px; color: var(--ink-dim); }
-.mode-toggle button.active { background: var(--motor); color: #06101f; font-weight: 650; }
+.mode-toggle button.active { background: var(--motor); color: #000010; font-weight: 650; }
 
 .screen { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: 14px 28px; align-items: start; }
 .screen.hidden { display: none; }
@@ -146,7 +155,7 @@ header { display: flex; align-items: center; justify-content: space-between; }
 .side h3:first-child { margin-top: 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .tool-group { display: flex; flex-wrap: wrap; gap: 6px; }
-.tool.active { background: var(--motor); color: #06101f; border-color: var(--motor); font-weight: 600; }
+.tool.active { background: var(--motor); color: #000010; border-color: var(--motor); font-weight: 600; }
 .presets { display: flex; flex-direction: column; gap: 6px; }
 .presets button { text-align: left; }
 
@@ -160,7 +169,7 @@ header { display: flex; align-items: center; justify-content: space-between; }
   flex: 0 0 34px; text-align: center; padding: 0;
   color: var(--ink-dim); font-family: var(--mono);
 }
-.preset-mark.on { color: var(--motor); border-color: var(--motor); }
+.preset-mark.on { color: var(--amber); border-color: var(--amber); }
 
 /* Replay panel + scrub */
 #replay-panel.hidden { display: none; }
@@ -183,7 +192,13 @@ header { display: flex; align-items: center; justify-content: space-between; }
   transform: translateY(-1px);
 }
 /* parent-app exact light colours */
-.sw-white { background: rgb(255,200,60); }
-.sw-red   { background: rgb(220,60,60); }
-.sw-green { background: rgb(60,200,60); }
-.sw-blue  { background: rgb(80,140,255); }
+/* These MUST match LIGHT_RGB in arena.js — the swatch is a preview of the
+   light it places, and nothing checks that the two agree. */
+.sw-white { background: rgb(255,220,60); }
+.sw-red   { background: rgb(255,40,40); }
+.sw-green { background: rgb(0,255,160); }
+.sw-blue  { background: rgb(40,120,255); }
+
+/* 16-BIT: square-ish chrome and monospace faces on interactive elements. */
+button, .sw, .preset-mark { border-radius: var(--radius); }
+h1, h3, button, .hint, .preset-load { font-family: var(--mono); }

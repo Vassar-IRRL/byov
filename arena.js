@@ -2,7 +2,7 @@
  * canvas rendering (arena, vehicle body, directional sensor cones, trail).
  * Mirrors the physical PAW arena proportions (1.2 m × 1.6 m).
  */
-import { PHYS, LDR, sensorPose } from './sim.js?v=9';
+import { PHYS, LDR, sensorPose } from './sim.js?v=10';
 
 export class Arena {
   constructor(width = 1.2, height = 1.6) {
@@ -65,9 +65,9 @@ export class Renderer {
     const ctx = this.ctx;
     const SEGMENTS = 10, segW = 18, segH = 9, segGap = 2;
     const barH = SEGMENTS * (segH + segGap) - segGap;     // 108
-    const LIT  = { M1: '#dc3232', M2: '#f0f0f0', M3: '#dc3232' };
-    const DIM  = { M1: '#4a1414', M2: '#4a4a4a', M3: '#4a1414' };
-    const OFF  = '#262b33';                    // unlit LED, visible on the panel
+    const LIT  = { M1: '#ff2828', M2: '#ffffff', M3: '#ff2828' };
+    const DIM  = { M1: '#3a0808', M2: '#303850', M3: '#3a0808' };
+    const OFF  = '#1c1c58';                    // unlit LED, visible on the panel
     const order = ['M1', 'M2', 'M3'];          // left -> right, as on the robot
     const pitch = 34;                          // centre-to-centre spacing
     const groupW = (order.length - 1) * pitch;
@@ -75,7 +75,7 @@ export class Renderer {
     const by = Math.max(24, (this.canvas.height - barH) / 2 - 30);
 
     // header for the whole HUD
-    ctx.fillStyle = running ? '#c9d1d9' : '#6b7280';
+    ctx.fillStyle = running ? '#ccdcff' : '#505a8c';
     ctx.font = 'bold 10px monospace'; ctx.textAlign = 'center';
     ctx.fillText('METERS', 16 + this.hudW / 2, by - 14);
 
@@ -87,8 +87,8 @@ export class Renderer {
       const bx = cxBar - segW / 2;
 
       // housing — always visible so the meters read as hardware when idle
-      ctx.fillStyle = '#0b0e13';
-      ctx.strokeStyle = running ? '#3a4250' : '#232a33';
+      ctx.fillStyle = '#000418';
+      ctx.strokeStyle = running ? '#4444cc' : '#1c1c58';
       ctx.lineWidth = 1.5;
       this._rr(bx - 5, by - 5, segW + 10, barH + 10, 4);
       ctx.fill(); ctx.stroke();
@@ -103,10 +103,10 @@ export class Renderer {
       }
 
       // label + whatever is wired to it
-      ctx.fillStyle = running ? '#c9d1d9' : '#8b949e';
+      ctx.fillStyle = running ? '#ccdcff' : '#4444cc';
       ctx.font = 'bold 11px monospace'; ctx.textAlign = 'center';
       ctx.fillText(id, cxBar, by + barH + 18);
-      ctx.fillStyle = '#6b7280'; ctx.font = '9px monospace';
+      ctx.fillStyle = '#505a8c'; ctx.font = '9px monospace';
       ctx.fillText(mt && mt.input ? mt.input.srcId.replace('LDR_', 'L').replace('IR_', 'I') : '—',
                    cxBar, by + barH + 29);
     });
@@ -138,12 +138,12 @@ export class Renderer {
     this._drawMeterHUD(vehicle, !!opts.running);
 
     // arena floor
-    ctx.fillStyle = '#0d1117';
+    ctx.fillStyle = '#00041c';
     ctx.fillRect(this.tx(0), this.ty(A.H), this.m(A.W), this.m(A.H));
 
     // grid (edit mode)
     if (opts.showGrid) {
-      ctx.strokeStyle = '#1c2230'; ctx.lineWidth = 1;
+      ctx.strokeStyle = '#1c1c58'; ctx.lineWidth = 1;
       for (let gx = 0; gx <= A.W + 1e-6; gx += A.grid) {
         ctx.beginPath(); ctx.moveTo(this.tx(gx), this.ty(0)); ctx.lineTo(this.tx(gx), this.ty(A.H)); ctx.stroke();
       }
@@ -152,11 +152,13 @@ export class Renderer {
       }
     }
 
-    ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1;
+    ctx.strokeStyle = '#4444cc'; ctx.lineWidth = 1;
     ctx.strokeRect(this.tx(0), this.ty(A.H), this.m(A.W), this.m(A.H));
 
     // light sources (glow), tinted by colour
-    const LIGHT_RGB = { white: '255,200,60', red: '220,60,60', green: '60,200,60', blue: '80,140,255' };
+    // 16-BIT light colours. These MUST match the .sw-* swatches in style.css,
+    // which are the picker for exactly these values — nothing enforces it.
+    const LIGHT_RGB = { white: '255,220,60', red: '255,40,40', green: '0,255,160', blue: '40,120,255' };
     for (const L of A.lights) {
       const rgb = LIGHT_RGB[L.color] || LIGHT_RGB.white;
       const r = this.m(0.08) * (L.intensity || 1);
@@ -172,7 +174,7 @@ export class Renderer {
     }
 
     // walls
-    ctx.strokeStyle = '#8b949e'; ctx.lineWidth = Math.max(2, this.m(PHYS.WALL_T));
+    ctx.strokeStyle = '#4444cc'; ctx.lineWidth = Math.max(2, this.m(PHYS.WALL_T));
     for (const w of A.walls) {
       ctx.beginPath(); ctx.moveTo(this.tx(w.x1), this.ty(w.y1));
       ctx.lineTo(this.tx(w.x2), this.ty(w.y2)); ctx.stroke();
@@ -180,7 +182,7 @@ export class Renderer {
 
     // trail
     if (this.trail.length > 1) {
-      ctx.strokeStyle = 'rgba(88,166,255,0.6)'; ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(40,120,255,0.6)'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(this.tx(this.trail[0].x), this.ty(this.trail[0].y));
       for (const p of this.trail) ctx.lineTo(this.tx(p.x), this.ty(p.y));
       ctx.stroke();
@@ -206,8 +208,8 @@ export class Renderer {
         ctx.beginPath(); ctx.moveTo(cx, cy);
         ctx.arc(cx, cy, len, a - half, a + half);
         ctx.closePath();
-        ctx.fillStyle = (s.type === 'LDR') ? 'rgba(255,221,87,0.10)'
-                                           : 'rgba(255,107,107,0.10)';
+        ctx.fillStyle = (s.type === 'LDR') ? 'rgba(255,220,60,0.10)'
+                                           : 'rgba(68,204,255,0.10)';
         ctx.fill();
       }
     }
@@ -217,18 +219,18 @@ export class Renderer {
     ctx.translate(px, py);
     ctx.rotate(-v.heading + Math.PI / 2);   // heading: +Y forward -> rotate so forward is up
     const halfW = this.m(v.bodyW / 2), halfL = this.m(v.bodyL / 2);
-    ctx.fillStyle = '#1f6feb'; ctx.strokeStyle = '#58a6ff'; ctx.lineWidth = 2;
+    ctx.fillStyle = '#2878ff'; ctx.strokeStyle = '#44ccff'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.rect(-halfW, -halfL, halfW * 2, halfL * 2); ctx.fill(); ctx.stroke();
     // forward indicator (a notch at the front)
-    ctx.fillStyle = '#f0f6fc';
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath(); ctx.moveTo(0, -halfL); ctx.lineTo(-4, -halfL + 7); ctx.lineTo(4, -halfL + 7); ctx.closePath(); ctx.fill();
     // motors on the sides
-    ctx.fillStyle = '#58a6ff';
+    ctx.fillStyle = '#44ccff';
     ctx.fillRect(-halfW - 4, -6, 4, 12); ctx.fillRect(halfW, -6, 4, 12);
     // prominent heading arrow (shown when editing, so orientation is obvious)
     if (opts.showHeadingArrow) {
       const aLen = halfL + 22;
-      ctx.strokeStyle = '#ffdd57'; ctx.fillStyle = '#ffdd57'; ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffdc3c'; ctx.fillStyle = '#ffdc3c'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -aLen); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, -aLen); ctx.lineTo(-6, -aLen + 10); ctx.lineTo(6, -aLen + 10); ctx.closePath(); ctx.fill();
     }
@@ -237,7 +239,7 @@ export class Renderer {
     // sensor dots
     for (const s of v.sensors) {
       const pose = sensorPose(v, s.mount);
-      ctx.fillStyle = (s.type === 'LDR') ? '#ffdd57' : '#ff6b6b';
+      ctx.fillStyle = (s.type === 'LDR') ? '#ffdc3c' : '#44ccff';
       ctx.beginPath(); ctx.arc(this.tx(pose.x), this.ty(pose.y), 3, 0, Math.PI * 2); ctx.fill();
     }
   }
