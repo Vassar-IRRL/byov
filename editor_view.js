@@ -21,13 +21,14 @@
  * a module rotates its facing one step.
  */
 
-import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=8';
+import { MOTOR_SLOTS, MAX_NEURONS, MAX_SENSORS, RING_SLOTS } from './vehicle.js?v=9';
 
 const COL = {
   prox: '#ff69b4', motor: '#58a6ff',
   excite: '#3fb950', inhibit: '#f85149',
   deck: '#12161d', deckLine: '#3a4250',
   ink: '#e6edf3', dim: '#8b949e', tyre: '#0c0e12', tyreLine: '#2b3038',
+  label: '#ffdd57',        // --light: the phosphor accent, for deck captions
 };
 const LDR_CH_COL = { W: '#ffc83c', R: '#dc3c3c', G: '#3cc83c', B: '#508cff' };
 // Wire weight colours — blue 1x, green 2x, red 3x (engine/signals.py).
@@ -137,8 +138,8 @@ export class EditorView {
     // diagonally and leaves the canvas corner clear. Anywhere else in the
     // margin, a sensor eventually lands on top of the buttons.
     const bw = 28, bh = 26, bx = 8;
-    this.addSensorBtn = { x: bx, y: 22,      w: bw, h: bh };
-    this.subSensorBtn = { x: bx, y: 56,      w: bw, h: bh };
+    this.addSensorBtn = { x: bx, y: 26,      w: bw, h: bh };
+    this.subSensorBtn = { x: bx, y: 60,      w: bw, h: bh };
     this.addBtn       = { x: bx, y: H - 100, w: bw, h: bh };
     this.subBtn       = { x: bx, y: H - 66,  w: bw, h: bh };
   }
@@ -383,10 +384,10 @@ export class EditorView {
     const n = this.v.neurons.length;
     const btn = (b, label, enabled) => {
       ctx.fillStyle = enabled ? '#1b2230' : '#151a21';
-      ctx.strokeStyle = enabled ? COL.motor : COL.deckLine; ctx.lineWidth = 1.5;
+      ctx.strokeStyle = enabled ? COL.label : COL.deckLine; ctx.lineWidth = 1.5;
       this._roundRect(b.x, b.y, b.w, b.h, 6); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = enabled ? COL.ink : '#4a515c';
-      ctx.font = 'bold 15px monospace'; ctx.textAlign = 'center';
+      ctx.fillStyle = enabled ? COL.label : '#4a515c';
+      ctx.font = 'bold 18px monospace'; ctx.textAlign = 'center';
       ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 5);
     };
     btn(this.addBtn, '+', n < MAX_NEURONS);
@@ -394,14 +395,18 @@ export class EditorView {
     const sn = this.v.mountPoints.length;
     btn(this.addSensorBtn, '+', sn < MAX_SENSORS);
     btn(this.subSensorBtn, '−', sn > 0);
-    ctx.fillStyle = COL.dim; ctx.font = '9px monospace'; ctx.textAlign = 'center';
-    ctx.fillText('neurons', this.addBtn.x + this.addBtn.w / 2, this.addBtn.y - 8);
-    ctx.fillText(n + '/' + MAX_NEURONS, this.subBtn.x + this.subBtn.w / 2,
-                 this.subBtn.y + this.subBtn.h + 14);
-    ctx.fillText('sensors', this.addSensorBtn.x + this.addSensorBtn.w / 2,
-                 this.addSensorBtn.y - 8);
-    ctx.fillText(sn + '/' + MAX_SENSORS, this.subSensorBtn.x + this.subSensorBtn.w / 2,
-                 this.subSensorBtn.y + this.subSensorBtn.h + 14);
+    // Left-aligned: the buttons sit hard against the canvas edge, so a centred
+    // caption wider than the button runs off it.
+    ctx.fillStyle = COL.label; ctx.textAlign = 'left';
+    ctx.font = 'bold 13px monospace';
+    ctx.fillText('SENSORS', this.addSensorBtn.x, this.addSensorBtn.y - 9);
+    ctx.fillText('NEURONS', this.addBtn.x, this.addBtn.y - 9);
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText(sn + '/' + MAX_SENSORS, this.subSensorBtn.x,
+                 this.subSensorBtn.y + this.subSensorBtn.h + 15);
+    ctx.fillText(n + '/' + MAX_NEURONS, this.subBtn.x,
+                 this.subBtn.y + this.subBtn.h + 15);
+    ctx.textAlign = 'center';
   }
 
   _roundRect(x, y, w, h, r) {

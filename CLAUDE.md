@@ -28,19 +28,19 @@ cached copy.** This is the single most common way a change appears not to have
 shipped.
 
 The version tags are NOT all in `index.html` — seven of the nine live in JS
-`import` statements. All 9 sites, currently all at `?v=8`:
+`import` statements. All 9 sites, currently all at `?v=9`:
 
 | file | line | specifier |
 |---|---|---|
-| `index.html` | 7 | `style.css?v=8` |
-| `index.html` | 97 | `app.js?v=8` |
-| `app.js` | 3 | `./vehicle.js?v=8` |
-| `app.js` | 4 | `./arena.js?v=8` |
-| `app.js` | 5 | `./editor_view.js?v=8` |
-| `app.js` | 6 | `./sim.js?v=8` |
-| `arena.js` | 5 | `./sim.js?v=8` |
-| `editor_view.js` | 24 | `./vehicle.js?v=8` |
-| `vehicle.js` | 25 | `./sim.js?v=8` |
+| `index.html` | 7 | `style.css?v=9` |
+| `index.html` | 99 | `app.js?v=9` |
+| `app.js` | 3 | `./vehicle.js?v=9` |
+| `app.js` | 4 | `./arena.js?v=9` |
+| `app.js` | 5 | `./editor_view.js?v=9` |
+| `app.js` | 6 | `./sim.js?v=9` |
+| `arena.js` | 5 | `./sim.js?v=9` |
+| `editor_view.js` | 24 | `./vehicle.js?v=9` |
+| `vehicle.js` | 25 | `./sim.js?v=9` |
 
 Bumping only `index.html` busts `style.css` and `app.js` and nothing else — a
 changed `sim.js` is still served from cache, which looks exactly like "my edit
@@ -48,7 +48,7 @@ didn't ship". Bump all 9 together:
 
 ```
 grep -rn "?v=" index.html *.js            # see the current state
-sed -i 's/?v=8/?v=9/g' index.html *.js    # bump them all
+sed -i 's/?v=9/?v=10/g' index.html *.js    # bump them all
 ```
 
 A mismatch is worse than a stale copy: `app.js` and `editor_view.js` both
@@ -61,7 +61,7 @@ module instances** of it.
 
 | file | holds |
 |---|---|
-| `index.html` | markup, controls, 2 of the 8 `?v=N` tags |
+| `index.html` | markup, controls, 2 of the 9 `?v=N` tags |
 | `app.js` | top-level glue: screen toggle, presets + their lock state, run loop, record/replay, **and the arena editing tools** (place/erase lights and walls, place robot) |
 | `sim.js` | physics + sensor models. **All PHYSICS constants live here** — but not every tunable in the project; see below. |
 | `vehicle.js` | the vehicle: sensors, neurons, motors, signal flow |
