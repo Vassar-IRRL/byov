@@ -74,15 +74,18 @@ module instances** of it.
 
 ## Scope — read this before editing
 
-This repo is BYOV **only**. It is deliberately separate from the main
-PAW-Robotics suite, which is a Python/pygame project plus Arduino firmware.
-Do not import from it, mirror its structure, or try to keep the two in step
-automatically.
+This repo is BYOV **only**, and it is the only web copy. It is deliberately
+separate from the main PAW-Robotics suite, which is a Python/pygame project
+plus Arduino firmware. Do not import from it, mirror its structure, or try to
+keep the two in step automatically.
 
-**But the main suite contains `byov_web/`, an older copy of these same files.**
-As of this writing the two match on features but NOT on physics constants (see
-below). If a change here should also apply there, say so explicitly — it will
-not happen on its own, and nothing checks.
+There is no parallel `byov_web/` to keep in sync — an older copy lived in the
+main suite and is gone. Nothing here needs mirroring anywhere else.
+
+Two things here still ORIGINATE in the suite, and both are one-time ports that
+nothing keeps current: the 16-BIT palette (from `engine/theme.py`) and the
+measured robot figures in the comparison table below. If the suite changes
+either, it will not reach BYOV on its own.
 
 ---
 
@@ -145,7 +148,8 @@ grid-aligned, the stock vehicle moves — treat it as a physics change.
 ### These constants are KNOWN to disagree with the physical robot
 
 The main project measured the hardware and revised its own figures. BYOV was
-not updated. Current known differences:
+not updated. These are differences from the PHYSICAL ROBOT, recorded when the
+suite remeasured it — not from any code copy. Current known differences:
 
 | | BYOV | measured / main project |
 |---|---|---|
