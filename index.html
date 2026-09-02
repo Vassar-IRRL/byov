@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Build Your Own Vehicle</title>
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
   <header>
@@ -22,9 +22,11 @@
   <main id="screen-build" class="screen">
     <canvas id="editor" width="600" height="660"></canvas>
     <aside class="side">
-      <h3>Presets</h3>
-      <p class="hint">Locked until you build each vehicle.</p>
-      <div class="presets" id="presets"></div>
+      <div id="presets-section">
+        <h3>Presets</h3>
+        <p class="hint">Locked until you build each vehicle.</p>
+        <div class="presets" id="presets"></div>
+      </div>
       <h3>How to Customize your Vehicle</h3>
       <ul class="hints">
         <li><b>+</b> / <b>−</b> buttons add/remove neurons (max 6), and sensors (max 8), last-in-first-out.</li>
@@ -96,6 +98,6 @@
     </aside>
   </main>
 
-  <script type="module" src="app.js?v=14"></script>
+  <script type="module" src="app.js?v=15"></script>
 </body>
 </html>

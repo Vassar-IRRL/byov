@@ -2,14 +2,16 @@
  * canvas rendering (arena, vehicle body, directional sensor cones, trail).
  * Mirrors the physical PAW arena proportions (1.2 m × 1.6 m).
  */
-import { PHYS, LDR, sensorPose } from './sim.js?v=14';
+import { PHYS, LDR, sensorPose } from './sim.js?v=15';
 
 export class Arena {
   constructor(width = 1.2, height = 1.6) {
     this.W = width; this.H = height;
     this.grid = 0.10;                 // 10 cm grid for wall/light placement
     this.walls = this._boundary();
-    this.lights = [{ x: width * 0.5, y: height * 0.85, intensity: 1, color: 'white' }];
+    // No light and no interior walls to begin with — the student builds the
+    // world as well as the vehicle. _boundary() is the arena edge, not scenery.
+    this.lights = [];
     this.robotStart = { x: width * 0.5, y: height * 0.18, heading: Math.PI / 2 };
   }
   _boundary() {

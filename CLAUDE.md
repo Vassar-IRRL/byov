@@ -48,7 +48,7 @@ didn't ship". Bump all 9 together:
 
 ```
 grep -rn "?v=" index.html *.js            # see the current state
-sed -i 's/?v=11/?v=14/g' index.html *.js    # bump them all
+sed -i 's/?v=11/?v=15/g' index.html *.js    # bump them all
 ```
 
 A mismatch is worse than a stale copy: `app.js` and `editor_view.js` both
@@ -116,7 +116,7 @@ Before you go looking for a number in `sim.js` that isn't there:
 | `bodyW`, `bodyL` | `vehicle.js:47` | 0.090, 0.110 m |
 | stock mount slots + angles | `vehicle.js:52` | slots 2/1/23/22, ±35° and 0° |
 | `SENSOR_OUTSET` | `editor_view.js:37` | 24 px (drawing only) |
-| arena size, default light | `arena.js:8` | 1.2 × 1.6 m |
+| arena size | `arena.js:8` | 1.2 × 1.6 m |
 | timestep clamp | `app.js:244` | 0.05 s max per frame |
 
 ### Where sensors sit
@@ -176,11 +176,21 @@ that is its own change with its own testing.
 - **Motors have FWD and REV banks** of 4 sockets each. There is no
   excite/inhibit on motors; direction is which bank the wire lands in.
   `motor = clamp(sharedBias + Σfwd − Σrev, −1, 1)`.
+- **The vehicle and the arena both boot EMPTY.** No sensors, no neurons, no
+  wiring, no lights, no interior walls — `Vehicle.clearSensors()` and an empty
+  `Arena.lights`. The student equips the chassis and builds the world; nothing
+  is handed to them. `Vehicle.resetMounts()` still exists and still puts the
+  stock four back, for anything that wants a known starting machine.
 - **Neurons are optional.** Default wiring is sensor → motor direct. Max 6,
   added and removed last-in-first-out. Neurons DO have E/I inputs.
 - **Meters M1–M3** are display only. One wire each. They never affect motors.
 - **One shared bias pot** between the motors sets a resting speed. There are no
   per-motor pots.
+- **PRESETS ARE CURRENTLY SWITCHED OFF.** `PRESETS_ENABLED = false` in
+  `app.js` hides the whole sidebar section. The code below is live, not dead —
+  flip the flag and the buttons, lock markers and `localStorage` state all work
+  again. The bullets that follow describe that switched-off feature; see
+  **Planned** for why it is off and what has to be settled first.
 - **Presets start LOCKED** and greyed out. Each row has a marker the student
   ticks to claim they built that vehicle; that unlocks the preset, and ticking
   again re-locks it. State is in `localStorage` under `byov.presetsBuilt`
@@ -228,6 +238,21 @@ that is its own change with its own testing.
 ---
 
 ## Planned — not built yet
+
+- **Bringing presets back, with 3a/3b done properly.** They are off because
+  the canned vehicles were not worth the development time for this baseline,
+  and because 3a/3b are unsettled. The decision, after discussion: a signed
+  connection should be a wire into the motor's **REVERSE bank**, NOT an
+  inhibitory neuron. An earlier commit implemented the neuron version and it is
+  still in `PRESETS` — treat it as superseded, not as the intended design.
+  The open problem is what "neutral forward" means. A reverse wire subtracts
+  from whatever is driving the motor forward, so 3a/3b need a resting forward
+  speed for the light to work against, and that speed has to come from
+  somewhere: the shared pot (what the old version did, with `bias: .6`), or a
+  dedicated always-on input, or something else. Pick that and the rest is a
+  few lines. The behaviour to preserve is that a strong stimulus can drive the
+  motor NEGATIVE, so the vehicle backs away — which is exactly what the neuron
+  version cannot do, since a neuron clamps to `[0, 1]`.
 
 - **Composing presets.** Today a preset replaces everything, so a student who
   builds 2a and then wants to add 3a loses 2a. The intended fix is to select

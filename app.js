@@ -1,9 +1,9 @@
 /* app.js — two-screen BYOV: Build (robot+wiring) and Arena&run.
  */
-import { Vehicle } from './vehicle.js?v=14';
-import { Arena, Renderer } from './arena.js?v=14';
-import { EditorView } from './editor_view.js?v=14';
-import { driveStep } from './sim.js?v=14';
+import { Vehicle } from './vehicle.js?v=15';
+import { Arena, Renderer } from './arena.js?v=15';
+import { EditorView } from './editor_view.js?v=15';
+import { driveStep } from './sim.js?v=15';
 
 const arena = new Arena();
 const vehicle = new Vehicle();
@@ -48,6 +48,15 @@ function showRun() {
 }
 tabBuild.addEventListener('click', showBuild);
 tabRun.addEventListener('click', showRun);
+
+// ── Presets ── CURRENTLY SWITCHED OFF ────────────────────────────────────
+// Flip PRESETS_ENABLED to true to bring the whole feature back: the sidebar
+// section, the lock markers and localStorage state all still work. Everything
+// below is live code, not dead code, so it will not rot silently.
+//
+// Why it is off: the canned vehicles are not worth the development time for
+// this baseline release, and 3a/3b are not settled (see CLAUDE.md, Planned).
+const PRESETS_ENABLED = false;
 
 // ── Presets ──
 // A preset is DATA about one vehicle -- how many neurons it needs, what the
@@ -133,6 +142,9 @@ function saveBuilt(set) {
 let presetsBuilt = loadBuilt();
 
 function buildPresets() {
+  const section = document.getElementById('presets-section');
+  if (!PRESETS_ENABLED) { if (section) section.hidden = true; return; }
+  if (section) section.hidden = false;
   const box = document.getElementById('presets');
   box.innerHTML = '';
   for (const name of Object.keys(PRESETS)) {
@@ -454,8 +466,8 @@ editor.onChange = () => {};
 
 // ── Init ──
 buildPresets();
-// The vehicle starts UNWIRED. It used to boot with Vehicle 2b applied, which
-// would now hand out the answer to a locked preset before the student starts.
-vehicle.resetMounts();
+// The vehicle starts BARE: no sensors, no neurons, no wiring. The student
+// equips the chassis themselves; nothing is handed to them.
+vehicle.clearSensors();
 editor.layout(); editor.draw();
 showBuild();

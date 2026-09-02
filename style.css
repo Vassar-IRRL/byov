@@ -62,11 +62,11 @@ main {
 /* Bulleted instruction list — bullets keep each line distinct so the lines can
    sit tightly together without running into one another. */
 ul.hints {
-  color: var(--ink-dim); font-size: 12.5px; line-height: 1.26;
+  color: var(--ink); font-size: 12.5px; line-height: 1.26;
   margin: 0 0 2px; padding-left: 16px; list-style: disc;
 }
 ul.hints li { margin: 0 0 2px; padding-left: 2px; }
-ul.hints li::marker { color: var(--prox); }
+ul.hints li::marker { color: #ffffff; }
 .chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-dim); }
 
 button {

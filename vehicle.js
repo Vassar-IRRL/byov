@@ -22,7 +22,7 @@
  *     sensors/neurons -> meters   M = clamp(weight*source, 0, 1)      [display]
  *     sensors/neurons -> motors   V = clamp(sharedBias + Σfwd - Σrev, -1, 1)
  */
-import { sensorPose, readLDR, readIR, clamp } from './sim.js?v=14';
+import { sensorPose, readLDR, readIR, clamp } from './sim.js?v=15';
 
 export const WIRE_WEIGHT = { blue: 1, green: 2, red: 3 };
 export const WIRE_COLORS = ['blue', 'green', 'red'];
@@ -121,6 +121,17 @@ export class Vehicle {
     ];
     this.loadout  = { LDR_L: 'LDR', IR_L: 'IR', IR_R: 'IR', LDR_R: 'LDR' };
     this.channels = { LDR_L: 'W', IR_L: 'W', IR_R: 'W', LDR_R: 'W' };
+    this._rebuildSensors();
+    this._pruneDeadInputs();
+  }
+
+  /* Strip every sensor off the ring. The vehicle BOOTS like this: a blank
+   * chassis the student equips themselves. resetMounts() puts the stock four
+   * back for anything that wants a known starting machine. */
+  clearSensors() {
+    this.mountPoints = [];
+    this.loadout = {};
+    this.channels = {};
     this._rebuildSensors();
     this._pruneDeadInputs();
   }
